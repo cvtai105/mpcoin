@@ -86,7 +86,7 @@ mpcoin/
 1. Start the Kafka and PostgreSQL services:
 
    ```
-   docker-compose -f docker-compose.kafka.yml up -d
+   docker-compose -f docker-compose-kafka.yml up -d
    ```
 
 2. Build and run the API server:
@@ -114,7 +114,7 @@ If you have Make installed, you can use the following commands:
 
 ### API Documentation
 
-Swagger UI is available at `http://localhost:8080/docs` when the API server is running.
+Swagger UI is available at `http://localhost:8080/api/v1/swagger/index.html#/` when the API server is running.
 
 ## Development
 
