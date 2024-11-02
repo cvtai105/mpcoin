@@ -5,6 +5,7 @@ import (
 	"mpc/internal/usecase"
 	"mpc/pkg/utils"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -18,8 +19,54 @@ func NewTxnHandler(txnUC usecase.TxnUseCase) *TxnHandler {
 	return &TxnHandler{txnUC: txnUC}
 }
 
+// GetTransactions godoc
+// @Summary Get Transactions
+// @Description Get a list of transactions
+// @Tags transaction
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number"
+// @Param per_page query int false "Number of items per page"
+// @Param address query string true "Wallet address"
+// @Success 200 {object} docs.GetTxnResponse "Successful response"
+// @Failure 400 {string} string "Bad request error due to invalid input"
+// @Failure 500 {string} string "Internal server error"
+// @Router /transactions [get]
 func (h *TxnHandler) GetTransactions(c *gin.Context) {
-	utils.SuccessResponse(c, http.StatusOK, gin.H{"message": "Transactions retrieved"})
+	// Get page, per_page and adress query parameters
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1")) // Default to page 1
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid page parameter")
+		return
+	}
+	perPage, err := strconv.Atoi(c.DefaultQuery("per_page", "10")) // Default to 10 items per page
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid per_page parameter")
+		return
+	}
+	address := c.DefaultQuery("address", "")
+
+	// Get transactions
+	txnList, err := h.txnUC.GetPaginatedTransactions(c.Request.Context(), address, page, perPage)
+
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get transactions: "+err.Error())
+		return
+	}
+
+
+	// Send a successful response with the transaction list
+	utils.SuccessResponse(c, http.StatusOK, gin.H{"transactions": txnList})
+}
+
+func (h *TxnHandler) GetDetail(c *gin.Context) {
+	// Retrieve the "id" path parameter from the URL
+	id := c.Param("id")
+
+	// Use the id as needed
+	c.JSON(200, gin.H{
+		"id": id,
+	})
 }
 
 // CreateTransaction godoc

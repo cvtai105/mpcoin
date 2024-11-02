@@ -25,6 +25,39 @@ func NewTransactionRepo(dbPool *pgxpool.Pool) repository.TransactionRepository {
 // Ensure TransactionRepository implements TransactionRepository
 var _ repository.TransactionRepository = (*transactionRepository)(nil)
 
+// GetPaginatedTransactions implements repository.TransactionRepository.
+func (r *transactionRepository) GetPaginatedTransactions(ctx context.Context, address string, page int, limit int) ([]domain.Transaction, error) {
+
+	q := sqlc.New(r.DB())
+	transactions, err := q.GetPaginatedTransactions(ctx,sqlc.GetPaginatedTransactionsParams{
+		FromAddress: pgtype.Text{String: address, Valid: true},
+		Offset:    int32((page-1)*limit),
+		Limit:   int32(limit),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []domain.Transaction
+	for _, t := range transactions {
+		result = append(result, domain.Transaction{
+			ID:        t.ID.Bytes,
+			WalletID:  t.WalletID.Bytes,
+			ChainID:   t.ChainID.Bytes,
+			ToAddress: t.ToAddress,
+			Amount:    t.Amount,
+			TokenID:   t.TokenID.Bytes,
+			TxHash:    t.TxHash.String,
+			GasPrice:  t.GasPrice.String,
+			GasLimit:  t.GasLimit.String,
+			Nonce:     t.Nonce.Int64,
+			Status:    domain.Status(t.Status),
+		})
+	}
+	return result, nil
+
+}
+
 func (r *transactionRepository) CreateTransaction(ctx context.Context, params domain.CreateTransactionParams) (domain.Transaction, error) {
 
 	var transaction domain.Transaction

@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"time"
 
+	"mpc/internal/domain"
 	"mpc/internal/repository"
 
 	"github.com/ethereum/go-ethereum"
@@ -40,6 +41,11 @@ func NewEthereumClient(url, secretKey string) (*EthereumClient, error) {
 
 // Ensure EthereumClient implements EthereumRepository
 var _ repository.EthereumRepository = (*EthereumClient)(nil)
+
+// GetTransactionsStartBlock implements repository.EthereumRepository.
+func (c *EthereumClient) GetTransactionsStartByBlock(blockNumber *big.Int) ([]domain.Transaction, error) {
+	panic("unimplemented")
+}
 
 // CreateWallet generates a new Ethereum wallet.
 // It returns the private key, the associated Ethereum address, and any error encountered.

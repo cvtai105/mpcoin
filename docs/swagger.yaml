@@ -2,44 +2,69 @@ basePath: /api/v1
 definitions:
   docs.CreateTxnResponse:
     properties:
-      message:
-        type: string
-      txn_id:
-        type: string
+      payload:
+        properties:
+          message:
+            type: string
+          txn_id:
+            type: string
+        type: object
+    type: object
+  docs.GetTxnResponse:
+    properties:
+      payload:
+        properties:
+          transactions:
+            items:
+              $ref: '#/definitions/mpc_internal_domain.Transaction'
+            type: array
+        type: object
     type: object
   docs.LoginResponse:
     properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
-      user:
-        $ref: '#/definitions/mpc_internal_domain.LoginResponse'
+      payload:
+        properties:
+          access_token:
+            type: string
+          refresh_token:
+            type: string
+          user:
+            $ref: '#/definitions/mpc_internal_domain.LoginResponse'
+        type: object
     type: object
   docs.RefreshResponse:
     properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
+      payload:
+        properties:
+          access_token:
+            type: string
+          refresh_token:
+            type: string
+        type: object
     type: object
   docs.SignupResponse:
     properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
-      user:
-        $ref: '#/definitions/mpc_internal_domain.SignupResponse'
-      wallet:
-        $ref: '#/definitions/mpc_internal_domain.CreateWalletResponse'
+      payload:
+        properties:
+          access_token:
+            type: string
+          refresh_token:
+            type: string
+          user:
+            $ref: '#/definitions/mpc_internal_domain.SignupResponse'
+          wallet:
+            $ref: '#/definitions/mpc_internal_domain.CreateWalletResponse'
+        type: object
     type: object
   docs.SubmitTnxResponse:
     properties:
-      message:
-        type: string
-      tnx_hash:
-        type: string
+      payload:
+        properties:
+          message:
+            type: string
+          tnx_hash:
+            type: string
+        type: object
     type: object
   mpc_internal_domain.CreateTxnRequest:
     properties:
@@ -106,12 +131,55 @@ definitions:
       id:
         type: string
     type: object
+  mpc_internal_domain.Status:
+    enum:
+    - pending
+    - success
+    - failed
+    - submitted
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusSuccess
+    - StatusFailed
+    - StatusSubmitted
   mpc_internal_domain.SubmitTxnRequest:
     properties:
       txn_id:
         type: string
     required:
     - txn_id
+    type: object
+  mpc_internal_domain.Transaction:
+    properties:
+      amount:
+        type: string
+      chainID:
+        type: string
+      createdAt:
+        type: string
+      fromAddress:
+        type: string
+      gasLimit:
+        type: string
+      gasPrice:
+        type: string
+      id:
+        type: string
+      nonce:
+        type: integer
+      status:
+        $ref: '#/definitions/mpc_internal_domain.Status'
+      toAddress:
+        type: string
+      tokenID:
+        type: string
+      txHash:
+        type: string
+      updatedAt:
+        type: string
+      walletID:
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -233,6 +301,43 @@ paths:
       summary: Health Check
       tags:
       - health
+  /transactions:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of transactions
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Wallet address
+        in: query
+        name: address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response
+          schema:
+            $ref: '#/definitions/docs.GetTxnResponse'
+        "400":
+          description: Bad request error due to invalid input
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get Transactions
+      tags:
+      - transaction
   /transactions/create:
     post:
       consumes:

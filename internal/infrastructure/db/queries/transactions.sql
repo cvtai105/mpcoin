@@ -16,3 +16,12 @@ UPDATE transactions
 SET (status, tx_hash, gas_price, gas_limit, nonce) = ($2, $3, $4, $5, $6)
 WHERE id = $1
 RETURNING *;
+
+-- name: GetPaginatedTransactions :many
+SELECT *
+FROM transactions
+WHERE from_address = $1
+   OR to_address = $1
+ORDER BY created_at DESC
+LIMIT $2
+OFFSET $3;

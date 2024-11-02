@@ -65,9 +65,15 @@ func NewRouter(
 		transactions := v1.Group("/transactions")
 		transactions.Use(middleware.AuthMiddleware(*jwtService))
 		{
-			transactions.GET("/", txnHandler.GetTransactions)
+			// transactions.GET("/", txnHandler.GetTransactions)
 			transactions.POST("/create", txnHandler.CreateTransaction)
 			transactions.POST("/submit", txnHandler.SubmitTransaction)
+		}
+
+		publicTransactions := v1.Group("/transactions")
+		{
+			publicTransactions.GET("/", txnHandler.GetTransactions)
+			publicTransactions.GET("/:id", txnHandler.GetDetail)
 		}
 	}
 

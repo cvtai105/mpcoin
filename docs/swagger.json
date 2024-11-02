@@ -175,6 +175,62 @@
                 "responses": {}
             }
         },
+        "/transactions": {
+            "get": {
+                "description": "Get a list of transactions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transaction"
+                ],
+                "summary": "Get Transactions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Wallet address",
+                        "name": "address",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "schema": {
+                            "$ref": "#/definitions/docs.GetTxnResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request error due to invalid input",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/transactions/create": {
             "post": {
                 "security": [
@@ -294,64 +350,105 @@
         "docs.CreateTxnResponse": {
             "type": "object",
             "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "txn_id": {
-                    "type": "string"
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "message": {
+                            "type": "string"
+                        },
+                        "txn_id": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "docs.GetTxnResponse": {
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "transactions": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/mpc_internal_domain.Transaction"
+                            }
+                        }
+                    }
                 }
             }
         },
         "docs.LoginResponse": {
             "type": "object",
             "properties": {
-                "access_token": {
-                    "type": "string"
-                },
-                "refresh_token": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/mpc_internal_domain.LoginResponse"
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "access_token": {
+                            "type": "string"
+                        },
+                        "refresh_token": {
+                            "type": "string"
+                        },
+                        "user": {
+                            "$ref": "#/definitions/mpc_internal_domain.LoginResponse"
+                        }
+                    }
                 }
             }
         },
         "docs.RefreshResponse": {
             "type": "object",
             "properties": {
-                "access_token": {
-                    "type": "string"
-                },
-                "refresh_token": {
-                    "type": "string"
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "access_token": {
+                            "type": "string"
+                        },
+                        "refresh_token": {
+                            "type": "string"
+                        }
+                    }
                 }
             }
         },
         "docs.SignupResponse": {
             "type": "object",
             "properties": {
-                "access_token": {
-                    "type": "string"
-                },
-                "refresh_token": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/mpc_internal_domain.SignupResponse"
-                },
-                "wallet": {
-                    "$ref": "#/definitions/mpc_internal_domain.CreateWalletResponse"
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "access_token": {
+                            "type": "string"
+                        },
+                        "refresh_token": {
+                            "type": "string"
+                        },
+                        "user": {
+                            "$ref": "#/definitions/mpc_internal_domain.SignupResponse"
+                        },
+                        "wallet": {
+                            "$ref": "#/definitions/mpc_internal_domain.CreateWalletResponse"
+                        }
+                    }
                 }
             }
         },
         "docs.SubmitTnxResponse": {
             "type": "object",
             "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "tnx_hash": {
-                    "type": "string"
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "message": {
+                            "type": "string"
+                        },
+                        "tnx_hash": {
+                            "type": "string"
+                        }
+                    }
                 }
             }
         },
@@ -451,6 +548,21 @@
                 }
             }
         },
+        "mpc_internal_domain.Status": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "success",
+                "failed",
+                "submitted"
+            ],
+            "x-enum-varnames": [
+                "StatusPending",
+                "StatusSuccess",
+                "StatusFailed",
+                "StatusSubmitted"
+            ]
+        },
         "mpc_internal_domain.SubmitTxnRequest": {
             "type": "object",
             "required": [
@@ -458,6 +570,53 @@
             ],
             "properties": {
                 "txn_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "mpc_internal_domain.Transaction": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "chainID": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "fromAddress": {
+                    "type": "string"
+                },
+                "gasLimit": {
+                    "type": "string"
+                },
+                "gasPrice": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nonce": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/mpc_internal_domain.Status"
+                },
+                "toAddress": {
+                    "type": "string"
+                },
+                "tokenID": {
+                    "type": "string"
+                },
+                "txHash": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "walletID": {
                     "type": "string"
                 }
             }

@@ -40,19 +40,20 @@ type Token struct {
 }
 
 type Transaction struct {
-	ID        pgtype.UUID
-	WalletID  pgtype.UUID
-	ChainID   pgtype.UUID
-	ToAddress string
-	Amount    string
-	TokenID   pgtype.UUID
-	GasPrice  pgtype.Text
-	GasLimit  pgtype.Text
-	Nonce     pgtype.Int8
-	Status    string
-	TxHash    pgtype.Text
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	ID          pgtype.UUID
+	WalletID    pgtype.UUID
+	ChainID     pgtype.UUID
+	ToAddress   string
+	Amount      string
+	TokenID     pgtype.UUID
+	GasPrice    pgtype.Text
+	GasLimit    pgtype.Text
+	Nonce       pgtype.Int8
+	Status      string
+	TxHash      pgtype.Text
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	FromAddress pgtype.Text
 }
 
 type User struct {

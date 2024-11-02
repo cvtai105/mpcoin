@@ -113,8 +113,8 @@ If you have Make installed, you can use the following commands:
 - Run tests: `make test`
 
 ### API Documentation
-
-Swagger UI is available at `http://localhost:8080/api/v1/swagger/index.html#/` when the API server is running.
+- Gennerate docs after api descriptions change: swag init --parseDependency --parseInternal -g cmd/api/main.go
+- Swagger UI is available at `http://localhost:8080/api/v1/swagger/index.html#/` when the API server is running.
 
 ## Development
 
@@ -130,6 +130,9 @@ Swagger UI is available at `http://localhost:8080/api/v1/swagger/index.html#/` w
 2. Run migrations: `make migrate-up`
 3. Update SQLC queries in `internal/infrastructure/db/queries/`
 4. Generate new SQLC code: `make sqlc`
+5. Use docker to generate sqlc:
+   - docker pull sqlc/sqlc
+   - docker run --rm -v "<...>\mpcoin:/src" -w /src sqlc/sqlc generate  (replace <...> with your absolute directory)
 
 ## Testing
 

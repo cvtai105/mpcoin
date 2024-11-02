@@ -31,6 +31,7 @@ type TransactionRepository interface {
 	CreateTransaction(ctx context.Context, params domain.CreateTransactionParams) (domain.Transaction, error)
 	GetTransaction(ctx context.Context, id uuid.UUID) (domain.Transaction, error)
 	GetTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) ([]domain.Transaction, error)
+	GetPaginatedTransactions(ctx context.Context, address string, page, limit int) ([]domain.Transaction, error)
 	UpdateTransaction(ctx context.Context, transaction domain.Transaction) error
 	DBTransaction
 }
@@ -44,4 +45,5 @@ type EthereumRepository interface {
 	WaitForTxn(hash common.Hash) (*types.Receipt, error)
 	EncryptPrivateKey(data []byte) ([]byte, error)
 	DecryptPrivateKey(ciphertext []byte) ([]byte, error)
+	GetTransactionsStartByBlock(blockNumber *big.Int) ([]domain.Transaction, error)
 }
