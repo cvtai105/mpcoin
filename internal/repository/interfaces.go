@@ -49,5 +49,6 @@ type EthereumRepository interface {
 	WaitForTxn(hash common.Hash) (*types.Receipt, error)
 	EncryptPrivateKey(data []byte) ([]byte, error)
 	DecryptPrivateKey(ciphertext []byte) ([]byte, error)
-	GetTransactionsStartByBlock(blockNumber *big.Int) ([]domain.Transaction, error)
+	GetTransactionsStartFrom(blockNumber *big.Int) ([]domain.Transaction, error)
+	GetTransactionsInBlock(blockNumber *big.Int) ([]domain.Transaction, error)
 }

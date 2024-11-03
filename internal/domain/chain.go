@@ -10,4 +10,5 @@ type Chain struct {
 	NativeCurrency string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	ExplorerURL    string
 }

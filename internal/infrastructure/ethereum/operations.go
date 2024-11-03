@@ -43,9 +43,16 @@ func NewEthereumClient(url, secretKey string) (*EthereumClient, error) {
 var _ repository.EthereumRepository = (*EthereumClient)(nil)
 
 // GetTransactionsStartBlock implements repository.EthereumRepository.
-func (c *EthereumClient) GetTransactionsStartByBlock(blockNumber *big.Int) ([]domain.Transaction, error) {
+func (c *EthereumClient) GetTransactionsStartFrom(blockNumber *big.Int) ([]domain.Transaction, error) {
 	panic("unimplemented")
 }
+
+
+// GetTransactionsInBlock implements repository.EthereumRepository.
+func (c *EthereumClient) GetTransactionsInBlock(blockNumber *big.Int) ([]domain.Transaction, error) {
+	panic("unimplemented")
+}
+
 
 // CreateWallet generates a new Ethereum wallet.
 // It returns the private key, the associated Ethereum address, and any error encountered.

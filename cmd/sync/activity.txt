@@ -1,0 +1,10 @@
+Khi thêm chain mới vào app:
+    Cần rerun lại sync job để lấy thông tin chain từ database 
+Sync-job:
+    Mỗi chain 1 thread dùng websocket nghe blockcreated event.
+    Subcribers tạo async job để lấy block và scan transactions có address của người dùng
+    Tự tính toán balance hoặc lấy balance từ chain.
+    Lưu vào database
+    Cần lưu lại blockIndex của mỗi chain khi scan, vì trong khi rerun job, có thể có block dc tạo ra.
+    Khi job chạy lần đầu, scan from blockIndex tới cuối chain. nếu chưa có blockIndex thì không cần scan vì người dùng chưa tham gia.
+
