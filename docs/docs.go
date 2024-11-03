@@ -165,6 +165,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/balances/{wallet_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a list of balances by wallet id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "balance"
+                ],
+                "summary": "Get balances by wallet id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Wallet ID",
+                        "name": "wallet_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "schema": {
+                            "$ref": "#/definitions/docs.GetBalancesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request error due to invalid input",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "Check the health of the application",
@@ -369,6 +418,22 @@ const docTemplate = `{
                 }
             }
         },
+        "docs.GetBalancesResponse": {
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "balances": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/mpc_internal_domain.GetBalanceResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "docs.GetTxnResponse": {
             "type": "object",
             "properties": {
@@ -495,6 +560,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "mpc_internal_domain.GetBalanceResponse": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "number"
+                },
+                "decimals": {
+                    "type": "integer"
+                },
+                "token_id": {
+                    "type": "string"
+                },
+                "token_name": {
+                    "type": "string"
+                },
+                "token_symbol": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }

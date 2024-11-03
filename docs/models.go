@@ -35,8 +35,8 @@ type CreateTxnResponse struct {
 
 type SubmitTnxResponse struct {
 	Payload	  	struct {
-	TransactionId   string `json:"tnx_hash"`
-	Message    		string `json:"message"`
+		TransactionId   string `json:"tnx_hash"`
+		Message    		string `json:"message"`
 	}
 }
 
@@ -46,4 +46,8 @@ type GetTxnResponse struct {
 	}
 }
 
-
+type GetBalancesResponse struct {
+	Payload	  	struct {
+		GetBalanceResponse []domain.GetBalanceResponse `json:"balances"`
+	}
+}

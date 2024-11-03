@@ -10,6 +10,16 @@ definitions:
             type: string
         type: object
     type: object
+  docs.GetBalancesResponse:
+    properties:
+      payload:
+        properties:
+          balances:
+            items:
+              $ref: '#/definitions/mpc_internal_domain.GetBalanceResponse'
+            type: array
+        type: object
+    type: object
   docs.GetTxnResponse:
     properties:
       payload:
@@ -92,6 +102,21 @@ definitions:
       id:
         type: string
       user_id:
+        type: string
+    type: object
+  mpc_internal_domain.GetBalanceResponse:
+    properties:
+      balance:
+        type: number
+      decimals:
+        type: integer
+      token_id:
+        type: string
+      token_name:
+        type: string
+      token_symbol:
+        type: string
+      updated_at:
         type: string
     type: object
   mpc_internal_domain.LoginRequest:
@@ -290,6 +315,37 @@ paths:
       summary: User Signup
       tags:
       - auth
+  /balances/{wallet_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of balances by wallet id
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: wallet_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response
+          schema:
+            $ref: '#/definitions/docs.GetBalancesResponse'
+        "400":
+          description: Bad request error due to invalid input
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get balances by wallet id
+      tags:
+      - balance
   /health:
     get:
       consumes:

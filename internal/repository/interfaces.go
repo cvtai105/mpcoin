@@ -36,6 +36,10 @@ type TransactionRepository interface {
 	DBTransaction
 }
 
+type BalanceRepository interface {
+	GetBalancesByWalletId(ctx context.Context, walletID uuid.UUID) ([]domain.GetBalanceResponse, error)
+}
+
 type EthereumRepository interface {
 	CreateWallet() (*ecdsa.PrivateKey, common.Address, error)
 	GetBalance(address common.Address) (*big.Int, error)

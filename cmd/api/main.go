@@ -70,15 +70,17 @@ func main() {
 	userRepo := postgres.NewUserRepo(dbPool)
 	walletRepo := postgres.NewWalletRepo(dbPool)
 	transactionRepo := postgres.NewTransactionRepo(dbPool)
+	balanceRepo := postgres.NewBalanceRepo(dbPool)
 
 	// usecase
 	walletUC := usecase.NewWalletUC(walletRepo, ethClient)
 	authUC := usecase.NewAuthUC(userRepo, walletUC, *jwtService)
 	userUC := usecase.NewUserUC(userRepo)
 	txnUC := usecase.NewTxnUC(transactionRepo, ethClient, walletUC, *redisClient, kafkaProducer)
+	balanceUC := usecase.NewBalanceUC(balanceRepo, walletRepo)
 
 	// router
-	router := http.NewRouter(&userUC, &walletUC, &txnUC, &authUC, jwtService, log)
+	router := http.NewRouter(&userUC, &walletUC, &txnUC, &authUC, &balanceUC, jwtService, log)
 
 	log.Fatal(router.Run(":8080"))
 }
