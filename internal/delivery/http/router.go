@@ -18,7 +18,6 @@ func NewRouter(
 	walletUC *usecase.WalletUseCase,
 	txnUC *usecase.TxnUseCase,
 	authUC *usecase.AuthUseCase,
-	balanceUC *usecase.BalanceUseCase,
 	jwtService *auth.JWTService,
 	log *logrus.Logger,
 ) *gin.Engine {
@@ -32,7 +31,6 @@ func NewRouter(
 	userHandler := handler.NewUserHandler(userUC)
 	walletHandler := handler.NewWalletHandler(walletUC)
 	txnHandler := handler.NewTxnHandler(*txnUC)
-	balanceHanlder := handler.NewBalanceHandler(*balanceUC)
 
 	v1 := router.Group("/api/v1")
 	{
@@ -67,21 +65,10 @@ func NewRouter(
 		transactions := v1.Group("/transactions")
 		transactions.Use(middleware.AuthMiddleware(*jwtService))
 		{
-			// transactions.GET("/", txnHandler.GetTransactions)
+			transactions.GET("/", txnHandler.GetTransactions)
+			transactions.POST("/", txnHandler.CreateAndSubmitTransaction)
 			transactions.POST("/create", txnHandler.CreateTransaction)
 			transactions.POST("/submit", txnHandler.SubmitTransaction)
-		}
-
-		publicTransactions := v1.Group("/transactions")
-		{
-			publicTransactions.GET("/", txnHandler.GetTransactions)
-			publicTransactions.GET("/:id", txnHandler.GetDetail)
-		}
-
-		balance := v1.Group("/balances")
-		balance.Use(middleware.AuthMiddleware(*jwtService))
-		{
-			balance.GET("/:walletId", balanceHanlder.GetBalances)
 		}
 	}
 
