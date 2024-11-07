@@ -2,135 +2,235 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"math/rand"
-	"sync"
+	"log"
 	"time"
+
+	"sync"
+
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/google/uuid"
+	"github.com/segmentio/kafka-go"
+
+	mockdb "mpc/cmd/sync/db"
+	"mpc/cmd/sync/models"
+	"mpc/internal/domain"
+	"mpc/internal/infrastructure/config"
+	"mpc/internal/infrastructure/ethereum"
+	"mpc/internal/repository"
+	"mpc/internal/repository/postgres"
+
+	db "mpc/internal/infrastructure/db"
 )
 
-type Chain struct {
-	ID             int64
-	Name           string
-	ChainID        string
-	RPCURL         string
-	NativeCurrency string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	ExplorerURL    string
-	BlockIndex     int64
+var (
+	// wsApiKey = os.Getenv("WEBSOCKET_API_KEY")
+	walletAddressMapId = make(map[string]uuid.UUID)
+    // mu      sync.Mutex
+)
+
+func StartKafka(cfg *config.Config) {
+	kafConf := kafka.ReaderConfig{
+		Brokers:   cfg.Kafka.Brokers,
+		GroupID:   cfg.Kafka.SyncGroupId,
+		Topic:     cfg.Kafka.WalletCreatedTopic,
+		// MaxBytes:  10, 
+	}
+
+	reader := kafka.NewReader(kafConf)
+
+	for {
+		m, err := reader.ReadMessage(context.Background())
+		if err != nil {
+			log.Fatal(err)
+			fmt.Printf("Error reading kafka message: %v\n", err)
+			continue
+		}
+
+		//Handle message
+		walletCreatedEventHandle(string(m.Value))
+	}
 }
 
-// StartSyncJob initializes sync jobs for each chain
-func StartSyncJob(chains []Chain) {
+func walletCreatedEventHandle(message string){
+	var data domain.Wallet
+    err := json.Unmarshal([]byte(message), &data)
+    if err != nil {
+        fmt.Println("Error unmarshalling JSON:", err)
+        return
+    }
+	//update wallet address hash table
+	// mu.Lock()
+	walletAddressMapId[data.Address] = data.ID
+	// mu.Unlock()
+}
+
+// Persist users transactions
+func persistTransactions(ctx context.Context, transactions []domain.Transaction, tnxRepo repository.TransactionRepository, chain models.Chain) error {
+	usersTransactions := []domain.Transaction{}
+	for _, tnx := range transactions {
+
+		if(walletAddressMapId[tnx.FromAddress] == uuid.Nil && walletAddressMapId[tnx.ToAddress] == uuid.Nil){
+			continue
+		}
+		fmt.Printf("Transaction: %s\n", tnx.TxHash)
+		fmt.Printf("From: %s\n", tnx.FromAddress)
+		fmt.Printf("To: %s\n", tnx.ToAddress)
+
+		// todo: Check if the transaction already exists in the database
+		usersTransactions = append(usersTransactions, tnx)
+	}
+
+	// todo: refactor this, insert multiple transactions at once
+	for _, tnx := range usersTransactions {
+		_, err := tnxRepo.CreateTransaction(ctx, domain.CreateTransactionParams{
+			ID:        uuid.New(),
+			WalletID:  walletAddressMapId[tnx.FromAddress],
+			ChainID:   chain.ID,
+			FromAddress: tnx.FromAddress,
+			ToAddress: tnx.ToAddress,
+			Amount:    tnx.Amount,
+			TokenID:   uuid.Nil,
+			GasPrice:  tnx.GasPrice,
+			GasLimit:  tnx.GasLimit,
+			Nonce:     tnx.Nonce,
+			Status:    domain.Status(tnx.Status),
+		})
+		if err != nil {
+			fmt.Printf("Error inserting transaction %s: %v\n", tnx.TxHash, err)
+			return err
+		}
+		err = tnxRepo.UpdateTransaction(ctx, tnx)
+		if err != nil {
+			fmt.Printf("Error updating transaction %s: %v\n", tnx.TxHash, err)
+		}
+	}
+
+	return nil
+}
+
+// Consider using eth_subscribe to be notified when new blocks are available. https://docs.infura.io/api/networks/ethereum/how-to/subscribe-to-events
+func SyncChainData(
+	ctx context.Context, 
+	chain models.Chain, 
+	ethRepo repository.EthereumRepository,
+	wsEthRepo repository.EthereumRepository,
+	tnxRepo repository.TransactionRepository) error {
+	// Initial scan from start block to the latest block
+	if chain.LastScanBlock == -1 {
+		fmt.Printf("Chain %s added.\n", chain.Name)
+	} else {
+		go func(blockNum uint64, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain models.Chain) {
+			fmt.Printf("Chain %s is scanning from block %d to end\n", chain.Name, chain.LastScanBlock)
+			transactions, err := ethRepo.GetTransactionsStartFrom(blockNum)
+			if err != nil {
+				fmt.Printf("Error getting transactions: %v\n", err)
+				return
+			}
+
+			err = persistTransactions(ctx, transactions, tnxRepo, chain)
+			if err != nil {
+				fmt.Printf("Error persisting transactions: %v\n", err)
+				return
+			}
+		}(uint64(chain.LastScanBlock), ethRepo, tnxRepo, chain)
+	}
+
+	fmt.Printf("Setting up WebSocket connection for chain: %s\n", chain.Name)
+	headers := make(chan *types.Header)
+	sub, err := wsEthRepo.SubscribeNewHead(context.Background(), headers)
+	if err != nil {
+		log.Fatalf("Failed to subscribe to new head: %v", err)
+	}
+
+	// Lắng nghe sự kiện khi có block mới
+	fmt.Println("Listening for new blocks...")
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Printf("Context canceled, stopping block listener for chain %s\n", chain.Name)
+			return nil
+		case err := <-sub.Err():
+			fmt.Printf("Subscription error on chain %s: %v. Retrying...\n", chain.Name, err)
+			time.Sleep(5 * time.Second) // Retry delay before reconnecting
+			sub, err = wsEthRepo.SubscribeNewHead(ctx, headers)
+			if err != nil {
+				log.Printf("Failed to resubscribe to new head for chain %s: %v", chain.Name, err)
+				continue
+			}
+		case header := <-headers:
+			go func(header *types.Header, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain models.Chain) {
+				fmt.Printf("Chain %s: New block %d\n", chain.Name, header.Number.Uint64())
+				transactions, err := ethRepo.GetTransactionsInBlock(header.Number.Uint64())
+				if err != nil {
+					fmt.Printf("Error getting transactions for block %d on chain %s: %v\n", header.Number.Uint64(), chain.Name, err)
+					return
+				}
+
+				if len(transactions) > 0 {
+					fmt.Printf("Chain %s: Found %d navtive transactions in block %d\n", chain.Name, len(transactions), header.Number.Uint64())
+				}
+
+				persistTransactions(ctx, transactions, tnxRepo, chain)
+			}(header, wsEthRepo, tnxRepo, chain)
+		}
+	}
+
+}
+
+//to-do: add arguments hanlder to run specific chain sync job
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+		return
+	}
+
+	dbPool, err := db.InitDB(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.CloseDB()
+
+	transactionRepo := postgres.NewTransactionRepo(dbPool)
+	go StartKafka(cfg)
+
+	chains := mockdb.LoadChainsFromDatabase()
+	wallets := mockdb.LoadWalletsFromDatabase()
+
+	for _, wallet := range wallets {
+		walletAddressMapId[wallet.Address] = wallet.ID
+	}
+
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	for _, chain := range chains {
 		wg.Add(1)
-		go func(chain Chain) {
+		ethRepo, err := ethereum.NewEthereumClient(chain.RPCURL, cfg.Ethereum.SecretKey)
+		if err != nil {
+			log.Fatalf("Failed to initialize Ethereum client: %v", err)
+			wg.Done()
+			continue
+		}
+		wsEthRepo, err := ethereum.NewEthereumClient(chain.WSURL, cfg.Ethereum.SecretKey)
+		if err != nil {
+			log.Fatalf("Failed to initialize Ethereum client: %v", err)
+			wg.Done()
+			continue
+		}
+		
+		go func(chain models.Chain, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository) {
 			defer wg.Done()
-			fmt.Printf("Starting sync job for chain: %s\n", chain.Name)
-			// Call your setup and sync functions here with ctx for cancellation support
-			err := setupAndSync(ctx, chain)
+			fmt.Printf("Sync: Starting sync job for chain: %s\n", chain.Name)
+			err := SyncChainData(ctx, chain, ethRepo,wsEthRepo, tnxRepo)
 			if err != nil {
-				fmt.Printf("Error syncing chain %s: %v\n", chain.Name, err)
+				fmt.Printf("Sync: Error syncing chain %s: %v\n", chain.Name, err)
 			}
-		}(chain)
+		}(chain, ethRepo, transactionRepo)
 	}
 	wg.Wait()
 }
-// FetchBlockData simulates fetching and processing block data
-func FetchBlockData(chain Chain, blockIndex int64) {
-	fmt.Printf("Fetching block data for chain %s from block %d\n", chain.Name, blockIndex)
-	// Implement block and transaction scanning here
-}
 
-// setupAndSync simulates scanning from a start block to end block once, then listening for new blocks
-func setupAndSync(ctx context.Context, chain Chain) error {
-
-	// Initial scan from start block to the latest block
-	fmt.Printf("Scanning blocks from block %d to end on chain: %s\n", 1000, chain.Name)
-	time.Sleep(time.Duration(rand.Intn(10000)) * time.Millisecond) // Simulate initial block scan
-
-	
-	fmt.Printf("Setting up WebSocket connection for chain: %s\n", chain.Name)
-	time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond) // Simulate connection setup delay
-
-	// Channel to signal end of listening
-	done := make(chan struct{})
-
-	// Goroutine for listening to new blockcreated events
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				fmt.Printf("Block listener for chain %s was cancelled\n", chain.Name)
-				close(done)
-				return
-			case <-done:
-				fmt.Printf("Stopping block listener for chain %s\n", chain.Name)
-				return
-			default:
-				// Simulate receiving a blockcreated event
-				fmt.Printf("Listen on chain %s\n", chain.Name)
-				time.Sleep(time.Duration(5000) * time.Millisecond) // Simulate time until next block is created
-				fmt.Printf("New block created on chain %s\n", chain.Name)
-
-				// Trigger async transaction scan for the new block
-				go asyncScanNewBlock(ctx, chain)
-			}
-		}
-	}()
-
-	// Wait until we are done listening or context is cancelled
-	<-done
-	fmt.Printf("Completed sync for chain: %s\n", chain.Name)
-	return nil
-}
-
-// asyncScanNewBlock simulates scanning transactions for a new block asynchronously
-func asyncScanNewBlock(ctx context.Context, chain Chain) {
-	select {
-	case <-ctx.Done():
-		fmt.Printf("Async scan for new block on chain %s was cancelled\n", chain.Name)
-		return
-	default:
-		fmt.Printf("Asynchronously scanning transactions for new block on chain: %s\n", chain.Name)
-		time.Sleep(time.Duration(2000) * time.Millisecond) // Simulate async transaction scanning
-		fmt.Printf("Completed async transaction scan for new block on chain: %s\n", chain.Name)
-	}
-}
-
-func main() {
-	chains := loadChainsFromDatabase()
-	StartSyncJob(chains)
-}
-
-func loadChainsFromDatabase() []Chain {
-	return []Chain{
-		{
-			ID:             1,
-			Name:           "Ethereum",
-			ChainID:        "1",
-			RPCURL:         "https://mainnet.infura.io/v3/your_project_id",
-			NativeCurrency: "ETH",
-			CreatedAt:      time.Now(),
-			UpdatedAt:      time.Now(),
-			ExplorerURL:    "https://etherscan.io",
-			BlockIndex:     0,
-		},
-		{
-			ID:             2,
-			Name:           "Sepolia Testnet",
-			ChainID:        "11155111",
-			RPCURL:         "https://sepolia-testnet.infura.io/v3/your_project_id",
-			NativeCurrency: "SEP",
-			CreatedAt:      time.Now(),
-			UpdatedAt:      time.Now(),
-			ExplorerURL:    "https://sepolia-explorer.io",
-			BlockIndex:     0,
-		},
-	}
-
-}

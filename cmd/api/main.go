@@ -52,6 +52,11 @@ func main() {
 		log.Fatalf("Failed to initialize Kafka producer: %v", err)
 	}
 	defer kafkaProducer.Close()
+	walletCreatedPublisher, err := kafka.NewKafkaProducer(cfg, kafka.WithTopic(cfg.Kafka.WalletCreatedTopic))
+	if err != nil {
+		log.Fatalf("Failed to initialize Kafka producer: %v", err)
+	}
+	defer walletCreatedPublisher.Close()
 
 	// logger
 	log := logger.NewLogger()
@@ -73,7 +78,7 @@ func main() {
 	balanceRepo := postgres.NewBalanceRepo(dbPool)
 
 	// usecase
-	walletUC := usecase.NewWalletUC(walletRepo, ethClient)
+	walletUC := usecase.NewWalletUC(walletRepo, ethClient, walletCreatedPublisher)
 	authUC := usecase.NewAuthUC(userRepo, walletUC, *jwtService)
 	userUC := usecase.NewUserUC(userRepo)
 	txnUC := usecase.NewTxnUC(transactionRepo, ethClient, walletUC, *redisClient, kafkaProducer)

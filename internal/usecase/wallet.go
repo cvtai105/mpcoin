@@ -3,11 +3,15 @@ package usecase
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
+	"fmt"
+	"log"
 	"mpc/internal/domain"
 	"mpc/internal/repository"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
+	"github.com/segmentio/kafka-go"
 )
 
 type WalletUseCase interface {
@@ -17,12 +21,17 @@ type WalletUseCase interface {
 }
 
 type walletUseCase struct {
-	walletRepo repository.WalletRepository
-	ethRepo    repository.EthereumRepository
+	walletRepo 		repository.WalletRepository
+	ethRepo    		repository.EthereumRepository
+	kafkaProducer 	*kafka.Writer
 }
 
-func NewWalletUC(walletRepo repository.WalletRepository, ethRepo repository.EthereumRepository) WalletUseCase {
-	return &walletUseCase{walletRepo: walletRepo, ethRepo: ethRepo}
+func NewWalletUC(walletRepo repository.WalletRepository, ethRepo repository.EthereumRepository, kafkaProducer *kafka.Writer) WalletUseCase {
+	return &walletUseCase{
+		walletRepo: walletRepo, 
+		ethRepo: ethRepo,
+		kafkaProducer: kafkaProducer,
+	}
 }
 
 var _ WalletUseCase = (*walletUseCase)(nil)
@@ -48,7 +57,30 @@ func (uc *walletUseCase) CreateWallet(ctx context.Context, userID uuid.UUID) (do
 		EncryptedPrivateKey: encryptedPrivateKey,
 	}
 
-	return uc.walletRepo.CreateWallet(ctx, wallet)
+	
+	newWallet, err := uc.walletRepo.CreateWallet(ctx, wallet)
+	if err != nil {
+		return domain.Wallet{}, err
+	}
+
+	// Publish wallet created event to Kafka topic wallet-created
+	messageJSON, err := json.Marshal(newWallet)
+	if err != nil {
+		return domain.Wallet{}, err
+	}
+	fmt.Println("messageJSON: ", string(messageJSON))
+
+	err2 := uc.kafkaProducer.WriteMessages(ctx, kafka.Message{
+		Key:   []byte(newWallet.ID.String()),
+		Value: messageJSON,
+	})
+	if err2 != nil {
+		log.Printf("Failed to publish message to Kafka: %v", err)
+	}else{
+		fmt.Println("Published message to Topic: ", uc.kafkaProducer.Topic)
+	}
+
+	return newWallet, nil
 }
 
 func (uc *walletUseCase) GetWallet(ctx context.Context, id uuid.UUID) (domain.Wallet, error) {
