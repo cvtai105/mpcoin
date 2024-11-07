@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"strconv"
+	"sync"
 	"time"
 
 	"mpc/internal/domain"
@@ -28,31 +30,104 @@ import (
 type EthereumClient struct {
 	client    *ethclient.Client
 	secretKey string
+	rpcurl    string //for making raw request
+	//API_KEY_SECRET string	//if enpoint enable secret key
 }
+
+
 
 func NewEthereumClient(url, secretKey string) (*EthereumClient, error) {
 	client, err := ethclient.Dial(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Ethereum client: %w", err)
 	}
-
-	return &EthereumClient{client: client, secretKey: secretKey}, nil
+	return &EthereumClient{client: client, secretKey: secretKey, rpcurl: url}, nil
 }
 
 // Ensure EthereumClient implements EthereumRepository
 var _ repository.EthereumRepository = (*EthereumClient)(nil)
 
-// GetTransactionsStartBlock implements repository.EthereumRepository.
-func (c *EthereumClient) GetTransactionsStartFrom(blockNumber *big.Int) ([]domain.Transaction, error) {
-	panic("unimplemented")
+// GetLatestBlockNumber return all transactions from the blockNumber to the latest block
+func (c *EthereumClient) GetTransactionsStartFrom(blockNumber uint64) ([]domain.Transaction, error) {
+	// Get the latest block number
+	latestBlockNumber, err := c.client.BlockNumber(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest block number: %w", err)
+	}
+
+	inCount := new(sync.WaitGroup)
+	numBlocks := int(latestBlockNumber - blockNumber + 1)
+
+	result := []domain.Transaction{}
+	channel := make(chan []domain.Transaction, numBlocks) // Buffered channel
+
+	for i := blockNumber; i <= latestBlockNumber; i++ {
+		inCount.Add(1)
+		go func(blockNumber uint64) {
+			defer inCount.Done()
+			block, err := c.client.BlockByNumber(context.TODO(), big.NewInt(int64(blockNumber)))
+			if err != nil {
+				return
+			}
+
+			transactions := c.parseNativeCurrencyTransactionsInBlock(block)
+			channel <- transactions
+		}(i)
+	}
+
+	inCount.Wait()
+	close(channel)
+
+	for transactions := range channel {
+		if transactions != nil { // Filter out nil slices in case of errors
+			result = append(result, transactions...)
+		}
+	}
+
+	return result, nil
 }
-
-
-// GetTransactionsInBlock implements repository.EthereumRepository.
-func (c *EthereumClient) GetTransactionsInBlock(blockNumber *big.Int) ([]domain.Transaction, error) {
-	panic("unimplemented")
+// SubscribeNewHead implements repository.EthereumRepository.
+func (c *EthereumClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+	return c.client.SubscribeNewHead(ctx, ch)
 }
+// GetTransactionsInBlock retrieves all transactions in the given Ethereum block number. If number is nil, the
+// latest known block's transactions are returned.
+func (c *EthereumClient) GetTransactionsInBlock(blockNumber uint64) ([]domain.Transaction, error) {
 
+	block, err := c.client.BlockByNumber(context.TODO(), big.NewInt(int64(blockNumber)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get block: %w", err)
+	}
+	transactions := c.parseNativeCurrencyTransactionsInBlock(block)
+	return transactions, nil
+}
+func (c *EthereumClient) parseNativeCurrencyTransactionsInBlock(block *types.Block) []domain.Transaction {
+	transactions := []domain.Transaction{}
+	for _, tx := range block.Transactions() {
+		if len(tx.Data()) > 0 {
+			continue
+		}
+		from, err := types.Sender(types.LatestSignerForChainID(tx.ChainId()), tx)
+		if err != nil {
+			continue
+		}
+
+		transaction := domain.Transaction{
+			TxHash:      tx.Hash().Hex(),
+			FromAddress: from.String(),
+			ToAddress:   tx.To().Hex(),
+			Amount:      tx.Value().String(),
+			GasPrice:    tx.GasPrice().String(),
+			GasLimit:    strconv.FormatUint(tx.Gas(), 10),
+			CreatedAt:   time.Now(),
+			Nonce:       int64(tx.Nonce()),
+			Status:      domain.StatusSuccess,
+		}
+		transactions = append(transactions, transaction)
+	}
+
+	return transactions
+}
 
 // CreateWallet generates a new Ethereum wallet.
 // It returns the private key, the associated Ethereum address, and any error encountered.

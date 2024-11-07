@@ -43,7 +43,7 @@ func NewKafkaProducer(cfg *config.Config, opts ...KafkaOption) (*Writer, error) 
 	}
 	producer := kafka.NewWriter(kafka.WriterConfig{
 		Brokers:  cfg.Kafka.Brokers,
-		Topic:    cfg.Kafka.Topic,
+		Topic:    options.Topic,
 		Balancer: &kafka.LeastBytes{},
 	})
 	return producer, nil

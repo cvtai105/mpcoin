@@ -44,8 +44,10 @@ type RedisConfig struct {
 }
 
 type KafkaConfig struct {
-	Brokers []string `mapstructure:"BROKERS"`
-	Topic   string   `mapstructure:"TOPIC"`
+	Brokers 			[]string 	`mapstructure:"BROKERS"`
+	Topic   			string   	`mapstructure:"TOPIC"`
+	SyncGroupId 		string 		`mapstructure:"KAFKA_SYNCHRONIZE_GROUP_ID"`
+	WalletCreatedTopic 	string 		`mapstructure:"KAFKA_WALLET_CREATED_TOPIC"`
 }
 
 type MailConfig struct {
@@ -104,6 +106,9 @@ func Load() (*Config, error) {
 	config.DB.ConnStr = viper.GetString("CONN_STR")
 	config.Ethereum.URL = viper.GetString("ETHEREUM_URL")
 	config.Ethereum.SecretKey = viper.GetString("ETHEREUM_SECRET_KEY")
+	config.Kafka.Brokers = viper.GetStringSlice("BROKERS")
+	config.Kafka.WalletCreatedTopic = viper.GetString("KAFKA_WALLET_CREATED_TOPIC")
+	config.Kafka.SyncGroupId = viper.GetString("KAFKA_SYNCHRONIZE_GROUP_ID")
 
 	// Set default values if not provided
 	if config.JWT.TokenDuration == 0 {

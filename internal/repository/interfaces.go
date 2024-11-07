@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"mpc/internal/domain"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
@@ -33,6 +34,7 @@ type TransactionRepository interface {
 	GetTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) ([]domain.Transaction, error)
 	GetPaginatedTransactions(ctx context.Context, address string, page, limit int) ([]domain.Transaction, error)
 	UpdateTransaction(ctx context.Context, transaction domain.Transaction) error
+	// InsertTransactions(ctx context.Context, transactions []domain.Transaction) error
 	DBTransaction
 }
 
@@ -49,6 +51,7 @@ type EthereumRepository interface {
 	WaitForTxn(hash common.Hash) (*types.Receipt, error)
 	EncryptPrivateKey(data []byte) ([]byte, error)
 	DecryptPrivateKey(ciphertext []byte) ([]byte, error)
-	GetTransactionsStartFrom(blockNumber *big.Int) ([]domain.Transaction, error)
-	GetTransactionsInBlock(blockNumber *big.Int) ([]domain.Transaction, error)
+	GetTransactionsStartFrom(blockNumber uint64) ([]domain.Transaction, error)
+	GetTransactionsInBlock(blockNumber uint64) ([]domain.Transaction, error)
+	SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error)
 }
