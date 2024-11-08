@@ -23,10 +23,11 @@ WHERE id = $1
 RETURNING *;
 
 -- name: GetPaginatedTransactions :many
-SELECT *
-FROM transactions
-WHERE from_address = $1
-   OR to_address = $1
-ORDER BY created_at DESC
-LIMIT $2
-OFFSET $3;
+SELECT transactions.*
+FROM users
+JOIN wallets ON users.id = wallets.user_id
+JOIN transactions ON wallets.address = transactions.from_address OR wallets.address = transactions.to_address
+WHERE users.id = $1 AND transactions.token_id = $2
+ORDER BY transactions.created_at DESC
+LIMIT $3
+OFFSET $4;

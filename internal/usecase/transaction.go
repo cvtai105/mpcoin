@@ -28,7 +28,7 @@ type TxnUseCase interface {
 	CreateTransaction(ctx context.Context, userID uuid.UUID, params domain.CreateTxnRequest) (uuid.UUID, error)
 	SubmitTransaction(ctx context.Context, userId uuid.UUID, txnId uuid.UUID) (domain.Transaction, error)
 	GetTransactions(ctx context.Context, walletID uuid.UUID) ([]domain.Transaction, error)
-	GetPaginatedTransactions(ctx context.Context, walletID string, page, perPage int) ([]domain.Transaction, error)
+	GetPaginatedTransactions(ctx context.Context, userId uuid.UUID, tokenId uuid.UUID, page, perPage int) ([]domain.Transaction, error)
 }
 
 type txnUseCase struct {
@@ -46,23 +46,23 @@ func NewTxnUC(txnRepo repository.TransactionRepository, ethRepo repository.Ether
 var _ TxnUseCase = (*txnUseCase)(nil)
 
 // GetPaginatedTransactions implements TxnUseCase.
-func (uc *txnUseCase) GetPaginatedTransactions(ctx context.Context, address string, page int, perPage int) ([]domain.Transaction, error) {
+func (uc *txnUseCase) GetPaginatedTransactions(ctx context.Context, userId uuid.UUID, tokenId uuid.UUID, page int, perPage int) ([]domain.Transaction, error) {
 	
-	if(address == ""){
-		return nil, errors.New("wallet address is required")
+	if(userId == uuid.Nil){
+		return nil, errors.New("address cannot be nil")
 	}
 	if(page < 1){
-		page = 1
+		return nil, errors.New("page must be greater than 0")
 	}
 	if(perPage < 1){
-		perPage = 10
+		return nil, errors.New("perPage must be greater than 0")
 	}
 
 	// Get transactions
-	txnList, err := uc.txnRepo.GetPaginatedTransactions(ctx, address, page, perPage)
+	txnList, err := uc.txnRepo.GetPaginatedTransactions(ctx, userId, tokenId, page, perPage)
 	
 	if err != nil {
-		return nil, fmt.Errorf("failed to get transactions: %w", err)
+		return nil, fmt.Errorf("transactionUsecase.GetPaginatedTransactions: failed to call txnRepo: %w", err)
 	}
 
 	if txnList == nil {

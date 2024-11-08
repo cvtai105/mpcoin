@@ -33,6 +33,17 @@ func NewTxnHandler(txnUC usecase.TxnUseCase) *TxnHandler {
 // @Failure 500 {string} string "Internal server error"
 // @Router /transactions [get]
 func (h *TxnHandler) GetTransactions(c *gin.Context) {
+
+	userId := c.MustGet("userID").(uuid.UUID)
+	if userId == uuid.Nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "User not authenticated")
+		return
+	}
+	tokenId, err := uuid.Parse(c.Query("token"))
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid token parameter")
+		return
+	}
 	// Get page, per_page and adress query parameters
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1")) // Default to page 1
 	if err != nil {
@@ -44,19 +55,16 @@ func (h *TxnHandler) GetTransactions(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid per_page parameter")
 		return
 	}
-	address := c.DefaultQuery("address", "")
 
 	// Get transactions
-	txnList, err := h.txnUC.GetPaginatedTransactions(c.Request.Context(), address, page, perPage)
+	txnList, err := h.txnUC.GetPaginatedTransactions(c.Request.Context(), userId, tokenId, page, perPage)
 
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get transactions: "+err.Error())
 		return
 	}
-
-
 	// Send a successful response with the transaction list
-	utils.SuccessResponse(c, http.StatusOK, gin.H{"transactions": txnList})
+	utils.SuccessResponse(c, http.StatusOK, gin.H{"transactions": txnList, "userId": userId, "page": page, "per_page": perPage})
 }
 
 func (h *TxnHandler) GetDetail(c *gin.Context) {

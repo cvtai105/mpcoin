@@ -64,23 +64,30 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 }
 
 const getPaginatedTransactions = `-- name: GetPaginatedTransactions :many
-SELECT id, wallet_id, chain_id, to_address, amount, token_id, gas_price, gas_limit, nonce, status, tx_hash, created_at, updated_at, from_address
-FROM transactions
-WHERE from_address = $1
-   OR to_address = $1
-ORDER BY created_at DESC
-LIMIT $2
-OFFSET $3
+SELECT transactions.id, transactions.wallet_id, transactions.chain_id, transactions.to_address, transactions.amount, transactions.token_id, transactions.gas_price, transactions.gas_limit, transactions.nonce, transactions.status, transactions.tx_hash, transactions.created_at, transactions.updated_at, transactions.from_address
+FROM users
+JOIN wallets ON users.id = wallets.user_id
+JOIN transactions ON wallets.address = transactions.from_address OR wallets.address = transactions.to_address
+WHERE users.id = $1 AND transactions.token_id = $2
+ORDER BY transactions.created_at DESC
+LIMIT $3
+OFFSET $4
 `
 
 type GetPaginatedTransactionsParams struct {
-	FromAddress pgtype.Text
-	Limit       int32
-	Offset      int32
+	ID      pgtype.UUID
+	TokenID pgtype.UUID
+	Limit   int32
+	Offset  int32
 }
 
 func (q *Queries) GetPaginatedTransactions(ctx context.Context, arg GetPaginatedTransactionsParams) ([]Transaction, error) {
-	rows, err := q.db.Query(ctx, getPaginatedTransactions, arg.FromAddress, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getPaginatedTransactions,
+		arg.ID,
+		arg.TokenID,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -2,24 +2,29 @@
     1 user 1 wallet.
     backend create random address, and balance list, persist in db
 
-2. get balances of wallet (login -> home)
+2. get balances of user (login -> home)
     frontend pass access_token
     backend get balance base on user_id in access_token
     backend return list of {token, balance}
-    backend return data: list {token, balance, chain}
+    backend return data: list {token, balance}
 
 3. get user transactions on specific token/chain (user click token)
-    frontend pass access_token and tokenId/tokenId
+    frontend pass access_token and tokenId/chainId
     backend get chainId base on tokenId (store map in buffer for performace enhance)
-    backend get transactions base on user_id and chainId.
-    backend return data: {transactions}
+    backend get transactions base on user_id and tokenId.
+    backend return data: list {transaction}
 
-4. 
+4. synchornize data from blockchain
+    foreach chain in database,
+    syncApp listening for newWalletCreated event --> update the wallet addresses in buffer
+    syncApp listening for newHeadBlock event --> find transaction from unknown address to app's user address and persist to db
+    syncApp get Balances of addresses in the found transactions from blockchain and persist to db
+    if new chain added, restart sync app.
 
-4. tranfer token
+5. tranfer token
 
 
 
-*. add chain (admin)
-add native token, chain
-add balances for all user
+6. add chain (admin auth)
+    --> add native token, chain
+    --> add balances for all user
