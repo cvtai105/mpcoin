@@ -7,10 +7,10 @@ import (
 )
 
 type Balance struct {
-	ID        int64
-	WalletID  int64
-	ChainID   int64
-	TokenID   int64
+	ID        uuid.UUID
+	WalletID  uuid.UUID
+	ChainID   uuid.UUID
+	TokenID   uuid.UUID
 	Balance   float64
 	UpdatedAt time.Time
 }
@@ -23,4 +23,10 @@ type GetBalanceResponse struct {
 	Decimals int64      `json:"decimals"`
 	Balance float64     `json:"balance"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type UpdateBalanceParams struct {
+	Address string
+	TokenID uuid.UUID
+	Balance float64
 }

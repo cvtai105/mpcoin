@@ -21,6 +21,7 @@ type Config struct {
 
 type DBConfig struct {
 	ConnStr string `mapstructure:"CONN_STR"`
+	UseCvTaiSample bool `mapstructure:"DB_CVTAI_SAMPLE"`
 }
 
 type AppConfig struct {
@@ -104,6 +105,7 @@ func Load() (*Config, error) {
 
 	// Manually set values for fields that don't match the default structure
 	config.DB.ConnStr = viper.GetString("CONN_STR")
+	config.DB.UseCvTaiSample = viper.GetBool("DB_USE_CVTAI_SAMPLE")
 	config.Ethereum.URL = viper.GetString("ETHEREUM_URL")
 	config.Ethereum.SecretKey = viper.GetString("ETHEREUM_SECRET_KEY")
 	config.Kafka.Brokers = viper.GetStringSlice("BROKERS")

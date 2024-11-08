@@ -40,6 +40,7 @@ type TransactionRepository interface {
 
 type BalanceRepository interface {
 	GetBalancesByUserId(ctx context.Context, userId uuid.UUID) ([]domain.GetBalanceResponse, error)
+	UpdateBalance(ctx context.Context, params domain.UpdateBalanceParams) error
 }
 
 type EthereumRepository interface {

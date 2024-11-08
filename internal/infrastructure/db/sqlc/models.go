@@ -18,15 +18,17 @@ type Balance struct {
 }
 
 type Chain struct {
-	ID             pgtype.UUID
-	Name           string
-	ChainID        string
-	RpcUrl         string
-	NativeCurrency string
-	CreatedAt      pgtype.Timestamptz
-	UpdatedAt      pgtype.Timestamptz
-	ExplorerUrl    pgtype.Text
-	NativeTokenID  pgtype.UUID
+	ID                  pgtype.UUID
+	Name                string
+	ChainID             string
+	RpcUrl              string
+	NativeCurrency      pgtype.Text
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	ExplorerUrl         pgtype.Text
+	NativeTokenID       pgtype.UUID
+	WsUrl               pgtype.Text
+	LastScanBlockNumber pgtype.Int8
 }
 
 type Token struct {
