@@ -1,6 +1,4 @@
-1. signup - create wallet
-    1 user 1 wallet.
-    backend create random address, and balance list, persist in db
+1. signup -> createWallet --> publish walletCreated message
 
 2. get balances of user (login -> home)
     frontend pass access_token
@@ -16,13 +14,15 @@
 
 4. synchornize data from blockchain
     foreach chain in database,
-    syncApp listening for newWalletCreated event --> update the wallet addresses in buffer
-    syncApp listening for newHeadBlock event --> find transaction from unknown address to app's user address and persist to db
-    syncApp get Balances of addresses in the found transactions from blockchain and persist to db
+    syncApp listening to newWalletCreated event from kafka --> update the wallet addresses in buffer
+    syncApp listening to newHeadBlock event 
+        --> find transaction relate to user address, publish transaction found message to kafka
+        --> find transaction from unknown address to app's user address and persist to db
+    syncApp listening to transactionFound event from kafka
+        --> getBalance in blockchain and persist to db
     if new chain added, restart sync app.
 
 5. tranfer token
-
 
 
 6. add chain (admin auth)

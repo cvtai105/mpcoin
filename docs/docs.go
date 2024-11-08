@@ -165,7 +165,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/balances/{wallet_id}": {
+        "/balances": {
             "get": {
                 "security": [
                     {
@@ -183,15 +183,6 @@ const docTemplate = `{
                     "balance"
                 ],
                 "summary": "Get balances by wallet id",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Wallet ID",
-                        "name": "wallet_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Successful response",
@@ -232,6 +223,11 @@ const docTemplate = `{
         },
         "/transactions": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Get a list of transactions",
                 "consumes": [
                     "application/json"
@@ -258,10 +254,9 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Wallet address",
-                        "name": "address",
-                        "in": "query",
-                        "required": true
+                        "description": "Token ID",
+                        "name": "token",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -273,6 +268,61 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad request error due to invalid input",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a new transaction and submit it",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transaction"
+                ],
+                "summary": "Create and Submit Transaction",
+                "parameters": [
+                    {
+                        "description": "Create Transaction Request",
+                        "name": "createTxnRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/mpc_internal_domain.CreateTxnRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successful response",
+                        "schema": {
+                            "$ref": "#/definitions/docs.CreateTxnResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request error due to invalid input",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized error due to invalid token",
                         "schema": {
                             "type": "string"
                         }
@@ -402,6 +452,9 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "big.Int": {
+            "type": "object"
+        },
         "docs.CreateTxnResponse": {
             "type": "object",
             "properties": {
@@ -411,7 +464,7 @@ const docTemplate = `{
                         "message": {
                             "type": "string"
                         },
-                        "txn_id": {
+                        "tx_hash": {
                             "type": "string"
                         }
                     }
@@ -440,6 +493,12 @@ const docTemplate = `{
                 "payload": {
                     "type": "object",
                     "properties": {
+                        "page": {
+                            "type": "integer"
+                        },
+                        "per_page": {
+                            "type": "integer"
+                        },
                         "transactions": {
                             "type": "array",
                             "items": {
@@ -568,7 +627,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "balance": {
-                    "type": "number"
+                    "$ref": "#/definitions/big.Int"
+                },
+                "contract_address": {
+                    "type": "string"
                 },
                 "decimals": {
                     "type": "integer"
@@ -596,7 +658,7 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string",
-                    "example": "admin@email.com"
+                    "example": "email@example.com"
                 },
                 "password": {
                     "type": "string",

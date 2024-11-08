@@ -27,11 +27,12 @@ func NewTxnHandler(txnUC usecase.TxnUseCase) *TxnHandler {
 // @Produce json
 // @Param page query int false "Page number"
 // @Param per_page query int false "Number of items per page"
-// @Param address query string true "Wallet address"
+// @Param token query string false "Token ID"
 // @Success 200 {object} docs.GetTxnResponse "Successful response"
 // @Failure 400 {string} string "Bad request error due to invalid input"
 // @Failure 500 {string} string "Internal server error"
 // @Router /transactions [get]
+// @Security ApiKeyAuth
 func (h *TxnHandler) GetTransactions(c *gin.Context) {
 
 	userId := c.MustGet("userID").(uuid.UUID)
@@ -64,7 +65,7 @@ func (h *TxnHandler) GetTransactions(c *gin.Context) {
 		return
 	}
 	// Send a successful response with the transaction list
-	utils.SuccessResponse(c, http.StatusOK, gin.H{"transactions": txnList, "userId": userId, "page": page, "per_page": perPage})
+	utils.SuccessResponse(c, http.StatusOK, gin.H{"transactions": txnList, "page": page, "per_page": perPage})
 }
 
 func (h *TxnHandler) GetDetail(c *gin.Context) {

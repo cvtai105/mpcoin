@@ -1,12 +1,14 @@
 basePath: /api/v1
 definitions:
+  big.Int:
+    type: object
   docs.CreateTxnResponse:
     properties:
       payload:
         properties:
           message:
             type: string
-          txn_id:
+          tx_hash:
             type: string
         type: object
     type: object
@@ -24,6 +26,10 @@ definitions:
     properties:
       payload:
         properties:
+          page:
+            type: integer
+          per_page:
+            type: integer
           transactions:
             items:
               $ref: '#/definitions/mpc_internal_domain.Transaction'
@@ -107,7 +113,9 @@ definitions:
   mpc_internal_domain.GetBalanceResponse:
     properties:
       balance:
-        type: number
+        $ref: '#/definitions/big.Int'
+      contract_address:
+        type: string
       decimals:
         type: integer
       token_id:
@@ -122,7 +130,7 @@ definitions:
   mpc_internal_domain.LoginRequest:
     properties:
       email:
-        example: admin@email.com
+        example: email@example.com
         type: string
       password:
         example: "12345678"
@@ -315,17 +323,11 @@ paths:
       summary: User Signup
       tags:
       - auth
-  /balances/{wallet_id}:
+  /balances:
     get:
       consumes:
       - application/json
       description: Get a list of balances by wallet id
-      parameters:
-      - description: Wallet ID
-        in: path
-        name: wallet_id
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -371,10 +373,9 @@ paths:
         in: query
         name: per_page
         type: integer
-      - description: Wallet address
+      - description: Token ID
         in: query
-        name: address
-        required: true
+        name: token
         type: string
       produces:
       - application/json
@@ -391,7 +392,44 @@ paths:
           description: Internal server error
           schema:
             type: string
+      security:
+      - ApiKeyAuth: []
       summary: Get Transactions
+      tags:
+      - transaction
+    post:
+      consumes:
+      - application/json
+      description: Create a new transaction and submit it
+      parameters:
+      - description: Create Transaction Request
+        in: body
+        name: createTxnRequest
+        required: true
+        schema:
+          $ref: '#/definitions/mpc_internal_domain.CreateTxnRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successful response
+          schema:
+            $ref: '#/definitions/docs.CreateTxnResponse'
+        "400":
+          description: Bad request error due to invalid input
+          schema:
+            type: string
+        "401":
+          description: Unauthorized error due to invalid token
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Create and Submit Transaction
       tags:
       - transaction
   /transactions/create:

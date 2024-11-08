@@ -2,6 +2,7 @@ package handler
 
 import (
 	"mpc/internal/usecase"
+	"mpc/pkg/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +29,7 @@ func NewBalanceHandler(blcUC usecase.BalanceUseCase) *BalanceHandler {
 // @Failure 400 {string} string "Bad request error due to invalid input"
 // @Failure 500 {string} string "Internal server error"
 // @Security ApiKeyAuth
-// @Router /balances/{wallet_id} [get]
+// @Router /balances [get]
 func (h *BalanceHandler) GetBalances(c *gin.Context) {
 	//get user id from context
 	userId := c.MustGet("userID").(uuid.UUID)
@@ -45,5 +46,5 @@ func (h *BalanceHandler) GetBalances(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"balances": balances, "user": userId, "status": "200"})
+	utils.SuccessResponse(c, http.StatusOK, gin.H{"balances": balances})
 }

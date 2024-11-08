@@ -28,7 +28,7 @@ type SignupResponse struct {
 
 type CreateTxnResponse struct {
 	Payload	  	struct {
-	TransactionId   string `json:"txn_id"`
+	TransactionHash   string `json:"tx_hash"`
 	Message    		string `json:"message"`
 	}
 }
@@ -42,7 +42,9 @@ type SubmitTnxResponse struct {
 
 type GetTxnResponse struct {
 	Payload	  	struct {
-	Transactions []domain.Transaction `json:"transactions"`
+		Transactions []domain.Transaction `json:"transactions"`
+		Page 	   int                  `json:"page"`
+		PerPage   int                  `json:"per_page"`
 	}
 }
 
