@@ -93,3 +93,34 @@ func (q *Queries) GetWalletByUserID(ctx context.Context, userID pgtype.UUID) (Wa
 	)
 	return i, err
 }
+
+const getWallets = `-- name: GetWallets :many
+SELECT id, user_id, address, encrypted_private_key, created_at, updated_at FROM wallets
+`
+
+func (q *Queries) GetWallets(ctx context.Context) ([]Wallet, error) {
+	rows, err := q.db.Query(ctx, getWallets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Wallet
+	for rows.Next() {
+		var i Wallet
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Address,
+			&i.EncryptedPrivateKey,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

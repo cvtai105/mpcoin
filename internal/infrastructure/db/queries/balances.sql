@@ -12,3 +12,13 @@ JOIN
     users u ON w.user_id = u.id
 WHERE 
     u.id = $1;
+
+-- name: UpdateBalance :one
+UPDATE balances
+SET balance = $1
+FROM wallets
+WHERE balances.wallet_id = wallets.id
+  AND wallets.address = $2 
+  AND balances.token_id = $3
+RETURNING *;
+

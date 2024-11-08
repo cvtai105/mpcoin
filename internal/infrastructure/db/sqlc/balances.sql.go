@@ -68,3 +68,54 @@ func (q *Queries) GetBalancesByUserId(ctx context.Context, id pgtype.UUID) ([]Ge
 	}
 	return items, nil
 }
+
+const updateBalance = `-- name: UpdateBalance :one
+UPDATE balances
+SET balance = $1
+FROM wallets
+WHERE balances.wallet_id = wallets.id
+  AND wallets.address = $2 
+  AND balances.token_id = $3
+RETURNING wallets.id, user_id, address, encrypted_private_key, created_at, wallets.updated_at, balances.id, wallet_id, chain_id, token_id, balance, balances.updated_at
+`
+
+type UpdateBalanceParams struct {
+	Balance pgtype.Numeric
+	Address string
+	TokenID pgtype.UUID
+}
+
+type UpdateBalanceRow struct {
+	ID                  pgtype.UUID
+	UserID              pgtype.UUID
+	Address             string
+	EncryptedPrivateKey []byte
+	CreatedAt           pgtype.Timestamptz
+	UpdatedAt           pgtype.Timestamptz
+	ID_2                pgtype.UUID
+	WalletID            pgtype.UUID
+	ChainID             pgtype.UUID
+	TokenID             pgtype.UUID
+	Balance             pgtype.Numeric
+	UpdatedAt_2         pgtype.Timestamptz
+}
+
+func (q *Queries) UpdateBalance(ctx context.Context, arg UpdateBalanceParams) (UpdateBalanceRow, error) {
+	row := q.db.QueryRow(ctx, updateBalance, arg.Balance, arg.Address, arg.TokenID)
+	var i UpdateBalanceRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Address,
+		&i.EncryptedPrivateKey,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ID_2,
+		&i.WalletID,
+		&i.ChainID,
+		&i.TokenID,
+		&i.Balance,
+		&i.UpdatedAt_2,
+	)
+	return i, err
+}
