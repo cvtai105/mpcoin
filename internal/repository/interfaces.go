@@ -25,6 +25,7 @@ type WalletRepository interface {
 	GetWallet(ctx context.Context, id uuid.UUID) (domain.Wallet, error)
 	GetWalletByUserID(ctx context.Context, userID uuid.UUID) (domain.Wallet, error)
 	GetWalletByAddress(ctx context.Context, address string) (domain.Wallet, error)
+	GetWallets(ctx context.Context) ([]domain.Wallet, error)
 	DBTransaction
 }
 
@@ -42,6 +43,9 @@ type BalanceRepository interface {
 	GetBalancesByUserId(ctx context.Context, userId uuid.UUID) ([]domain.GetBalanceResponse, error)
 	UpdateBalance(ctx context.Context, params domain.UpdateBalanceParams) error
 }
+type ChainRepository interface {
+	GetChains(ctx context.Context) ([]domain.Chain, error)
+}
 
 type EthereumRepository interface {
 	CreateWallet() (*ecdsa.PrivateKey, common.Address, error)
@@ -56,4 +60,5 @@ type EthereumRepository interface {
 	GetTransactionsInBlock(blockNumber uint64) ([]domain.Transaction, error)
 	SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error)
 	GetTransactionReceipt(context context.Context, txHash common.Hash) (*types.Receipt, error)
+	NewInstance(url string) (EthereumRepository, error)
 }

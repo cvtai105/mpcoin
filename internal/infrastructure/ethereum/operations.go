@@ -24,24 +24,26 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/google/uuid"
 )
 
 // EthereumClient represents a client for interacting with the Ethereum blockchain.
 type EthereumClient struct {
 	client    *ethclient.Client
 	secretKey string
-	rpcurl    string //for making raw request
-	//API_KEY_SECRET string	//if enpoint enable secret key
 }
 
-
+// NewInstance implements repository.EthereumRepository.
+func (c *EthereumClient) NewInstance(url string) (repository.EthereumRepository, error) {
+	return NewEthereumClient(url, c.secretKey)
+}
 
 func NewEthereumClient(url, secretKey string) (*EthereumClient, error) {
 	client, err := ethclient.Dial(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Ethereum client: %w", err)
 	}
-	return &EthereumClient{client: client, secretKey: secretKey, rpcurl: url}, nil
+	return &EthereumClient{client: client, secretKey: secretKey}, nil
 }
 
 // Ensure EthereumClient implements EthereumRepository
@@ -86,10 +88,12 @@ func (c *EthereumClient) GetTransactionsStartFrom(blockNumber uint64) ([]domain.
 
 	return result, nil
 }
+
 // SubscribeNewHead implements repository.EthereumRepository.
 func (c *EthereumClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
 	return c.client.SubscribeNewHead(ctx, ch)
 }
+
 // GetTransactionsInBlock retrieves all transactions in the given Ethereum block number. If number is nil, the
 // latest known block's transactions are returned.
 func (c *EthereumClient) GetTransactionsInBlock(blockNumber uint64) ([]domain.Transaction, error) {
@@ -113,6 +117,7 @@ func (c *EthereumClient) parseNativeCurrencyTransactionsInBlock(block *types.Blo
 		}
 
 		transaction := domain.Transaction{
+			ID:          uuid.New(),
 			TxHash:      tx.Hash().Hex(),
 			FromAddress: from.String(),
 			ToAddress:   tx.To().Hex(),

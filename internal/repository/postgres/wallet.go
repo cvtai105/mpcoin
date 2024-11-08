@@ -25,6 +25,28 @@ func NewWalletRepo(dbPool *pgxpool.Pool) repository.WalletRepository {
 // Ensure WalletRepository implements WalletRepository
 var _ repository.WalletRepository = (*walletRepository)(nil)
 
+// GetWallets implements repository.WalletRepository.
+func (r *walletRepository) GetWallets(ctx context.Context) ([]domain.Wallet, error) {
+	q := sqlc.New(r.DB())
+	wallets, err := q.GetWallets(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []domain.Wallet
+	for _, w := range wallets {
+		result = append(result, domain.Wallet{
+			ID: 				w.ID.Bytes,
+			UserID: 			w.UserID.Bytes,
+			Address: 			w.Address,
+			EncryptedPrivateKey: w.EncryptedPrivateKey,
+		})
+	}
+	return result, nil
+}
+
+
+
 func (r *walletRepository) CreateWallet(ctx context.Context, params domain.CreateWalletParams) (domain.Wallet, error) {
 	var wallet domain.Wallet
 	err := r.WithTx(ctx, func(tx pgx.Tx) error {

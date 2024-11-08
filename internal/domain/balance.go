@@ -1,8 +1,10 @@
 package domain
 
 import (
+	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/uuid"
 )
 
@@ -11,7 +13,7 @@ type Balance struct {
 	WalletID  uuid.UUID
 	ChainID   uuid.UUID
 	TokenID   uuid.UUID
-	Balance   float64
+	Balance   big.Int
 	UpdatedAt time.Time
 }
 
@@ -21,12 +23,12 @@ type GetBalanceResponse struct {
 	ContractAddress string `json:"contract_address"`
 	TokenSymbol string  `json:"token_symbol"`
 	Decimals int64      `json:"decimals"`
-	Balance float64     `json:"balance"`
+	Balance big.Int     `json:"balance"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type UpdateBalanceParams struct {
-	Address string
+	Balance *big.Int
+	Address common.Address
 	TokenID uuid.UUID
-	Balance float64
 }

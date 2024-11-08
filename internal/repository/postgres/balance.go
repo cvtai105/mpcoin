@@ -17,7 +17,17 @@ type balanceRepository struct {
 
 // UpdateBalance implements repository.BalanceRepository.
 func (b *balanceRepository) UpdateBalance(ctx context.Context, params domain.UpdateBalanceParams) error {
-	panic("unimplemented")
+	q := sqlc.New(b.DB())
+	_, err := q.UpdateBalance(ctx, sqlc.UpdateBalanceParams{
+		Address: params.Address.String(),
+		TokenID: pgtype.UUID{Bytes: params.TokenID, Valid: true},
+		Balance: pgtype.Numeric{Int: params.Balance, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetBalance implements repository.BalanceRepository.
@@ -32,10 +42,7 @@ func (b *balanceRepository) GetBalancesByUserId(ctx context.Context, userId uuid
 	for _, b := range balances {
 		result = append(result, domain.GetBalanceResponse{
 			TokenID: b.ID.Bytes,
-			Balance: func() float64 {
-				val, _ := b.Balance.Float64Value()
-				return val.Float64
-			}(),
+			Balance: *b.Balance.Int,
 			ContractAddress: b.ContractAddress,
 			UpdatedAt:       b.UpdatedAt.Time,
 			TokenName:       b.Name,

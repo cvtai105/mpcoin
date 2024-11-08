@@ -49,6 +49,7 @@ type KafkaConfig struct {
 	Topic   			string   	`mapstructure:"TOPIC"`
 	SyncGroupId 		string 		`mapstructure:"KAFKA_SYNCHRONIZE_GROUP_ID"`
 	WalletCreatedTopic 	string 		`mapstructure:"KAFKA_WALLET_CREATED_TOPIC"`
+	TransactionFoundTopic string 		`mapstructure:"KAFKA_TRANSACTION_FOUND_TOPIC"`
 }
 
 type MailConfig struct {
@@ -110,6 +111,7 @@ func Load() (*Config, error) {
 	config.Ethereum.SecretKey = viper.GetString("ETHEREUM_SECRET_KEY")
 	config.Kafka.Brokers = viper.GetStringSlice("BROKERS")
 	config.Kafka.WalletCreatedTopic = viper.GetString("KAFKA_WALLET_CREATED_TOPIC")
+	config.Kafka.TransactionFoundTopic = viper.GetString("KAFKA_TRANSACTION_FOUND_TOPIC")
 	config.Kafka.SyncGroupId = viper.GetString("KAFKA_SYNCHRONIZE_GROUP_ID")
 
 	// Set default values if not provided

@@ -14,13 +14,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 
-	mockdb "mpc/cmd/sync/db"
-	"mpc/cmd/sync/models"
 	"mpc/internal/domain"
 	"mpc/internal/infrastructure/config"
 	"mpc/internal/infrastructure/ethereum"
 	"mpc/internal/repository"
 	"mpc/internal/repository/postgres"
+	"mpc/internal/usecase"
+
+	customeKafka "mpc/internal/infrastructure/kafka"
 
 	db "mpc/internal/infrastructure/db"
 )
@@ -31,15 +32,23 @@ var (
     // mu      sync.Mutex
 )
 
-func StartKafka(cfg *config.Config) {
+func StartKafkaReaderTopicWalletCreated(cfg *config.Config) {
 	kafConf := kafka.ReaderConfig{
 		Brokers:   cfg.Kafka.Brokers,
-		GroupID:   cfg.Kafka.SyncGroupId,
+		// GroupID:   cfg.Kafka.SyncGroupId,
 		Topic:     cfg.Kafka.WalletCreatedTopic,
 		// MaxBytes:  10, 
 	}
 
 	reader := kafka.NewReader(kafConf)
+	defer reader.Close()
+
+	if err := reader.SetOffset(kafka.LastOffset); err != nil {
+		fmt.Println("error listening to wallet created topic:", err)
+		return
+	}
+
+	fmt.Println("Start listening to wallet created topic")
 
 	for {
 		m, err := reader.ReadMessage(context.Background())
@@ -53,8 +62,39 @@ func StartKafka(cfg *config.Config) {
 		walletCreatedEventHandle(string(m.Value))
 	}
 }
+func StartKafkaReaderTopicTransactionFound(cfg *config.Config, balanceUC usecase.BalanceUseCase) {
+	kafConf := kafka.ReaderConfig{
+		Brokers:   cfg.Kafka.Brokers,
+		// GroupID:   cfg.Kafka.SyncGroupId,
+		Topic:     cfg.Kafka.TransactionFoundTopic,
+		// MaxBytes:  10, 
+	}
+
+	reader := kafka.NewReader(kafConf)
+	defer reader.Close()
+
+	if err := reader.SetOffset(kafka.LastOffset); err != nil {
+		fmt.Println("error listening to transaction found topic:", err)
+		return
+	}
+
+	fmt.Println("Start listening to transaction found topic")
+
+	for {
+		m, err := reader.ReadMessage(context.Background())
+		if err != nil {
+			log.Fatal(err)
+			fmt.Printf("Error reading kafka message: %v\n", err)
+			continue
+		}
+
+		//Handle message
+		transactionFoundHandle(string(m.Value), balanceUC)
+	}
+}
 
 func walletCreatedEventHandle(message string){
+	fmt.Printf("New wallet created: %s\n", message)
 	var data domain.Wallet
     err := json.Unmarshal([]byte(message), &data)
     if err != nil {
@@ -67,11 +107,61 @@ func walletCreatedEventHandle(message string){
 	// mu.Unlock()
 }
 
-func persistUsersTransactions(ctx context.Context, transactions []domain.Transaction, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain models.Chain) error {
+func transactionFoundHandle(message string, balanceUC usecase.BalanceUseCase){
+	//update balance
+	var data domain.Transaction
+	err := json.Unmarshal([]byte(message), &data)
+	if err != nil {
+		fmt.Println("Error unmarshalling JSON:", err)
+		return
+	}
+	
+	hasFrom := walletAddressMapId[data.FromAddress]
+	hasTo := walletAddressMapId[data.ToAddress]
+
+	if hasFrom != uuid.Nil {
+		err = balanceUC.UpdateBalanceRPC(context.Background(), common.HexToAddress(data.FromAddress), data.TokenID)
+		if err != nil {
+			fmt.Println("Error updating balance:", err)
+			return
+		}
+	}	
+	if hasTo != uuid.Nil {
+		err = balanceUC.UpdateBalanceRPC(context.Background(), common.HexToAddress(data.ToAddress), data.TokenID)
+		if err != nil {
+			fmt.Println("Error updating balance:", err)
+			return
+		}
+	}
+}
+
+
+func persistUsersTransactions(ctx context.Context, transactions []domain.Transaction, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain domain.Chain, tnxFoundPublisher *customeKafka.Writer) error {
 	usersTransactions := []domain.Transaction{}
 	for _, tnx := range transactions {
 
-		// chỉ lấy các tnx từ address lạ chuyển tới address của user
+		if(walletAddressMapId[tnx.ToAddress] == uuid.Nil && walletAddressMapId[tnx.FromAddress] == uuid.Nil){
+			continue
+		}
+
+		tnx.ChainID = chain.ID
+		tnx.TokenID = chain.NativeTokenID	
+		//publish transaction found event
+		messageJSON, err := json.Marshal(tnx)
+		if err != nil {
+			fmt.Println("Error marshalling JSON:", err)
+		}
+		err = tnxFoundPublisher.WriteMessages(ctx, kafka.Message{
+			Key:   []byte(tnx.ID.String()),
+			Value: messageJSON,
+		})
+		if err != nil {
+			log.Printf("Failed to publish message to Kafka: %v", err)
+		}else{
+			fmt.Println("Published message to Topic: ", tnxFoundPublisher.Topic)
+		}
+
+		// chỉ lấy các tnx từ address lạ chuyển tới address của user để persist vào db
 		if(walletAddressMapId[tnx.ToAddress] == uuid.Nil){	
 			continue
 		}
@@ -94,8 +184,8 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 		}else{
 			tnx.Status = domain.StatusSuccess
 		}
-		tnx.ChainID = chain.ID
-		tnx.TokenID = chain.NativeTokenID
+		
+		tnx.WalletID = walletAddressMapId[tnx.ToAddress]
 		usersTransactions = append(usersTransactions, tnx)
 	}
 
@@ -108,17 +198,12 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 	return nil
 }
 
-func SyncChainData(
-	ctx context.Context, 
-	chain models.Chain, 
-	ethRepo repository.EthereumRepository,
-	wsEthRepo repository.EthereumRepository,
-	tnxRepo repository.TransactionRepository) error {
+func SyncChainData(	ctx context.Context, chain domain.Chain, ethRepo repository.EthereumRepository, wsEthRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, tnxFoundPublisher *customeKafka.Writer) error {
 	// Initial scan from start block to the latest block
 	if chain.LastScanBlock == -1 {
 		fmt.Printf("Chain %s added.\n", chain.Name)
 	} else {
-		go func(blockNum uint64, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain models.Chain) {
+		go func(blockNum uint64, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain domain.Chain, tnxFoundPublisher *customeKafka.Writer) {
 			fmt.Printf("Chain %s is scanning from block %d to end\n", chain.Name, chain.LastScanBlock)
 			transactions, err := ethRepo.GetTransactionsStartFrom(blockNum)
 			if err != nil {
@@ -126,12 +211,12 @@ func SyncChainData(
 				return
 			}
 
-			err = persistUsersTransactions(ctx, transactions, ethRepo, tnxRepo, chain)
+			err = persistUsersTransactions(ctx, transactions, ethRepo, tnxRepo, chain, tnxFoundPublisher)
 			if err != nil {
 				fmt.Printf("Error persisting transactions: %v\n", err)
 				return
 			}
-		}(uint64(chain.LastScanBlock), ethRepo, tnxRepo, chain)
+		}(uint64(chain.LastScanBlock), ethRepo, tnxRepo, chain, tnxFoundPublisher)
 	}
 
 	fmt.Printf("Setting up WebSocket connection for chain: %s\n", chain.Name)
@@ -157,7 +242,7 @@ func SyncChainData(
 				continue
 			}
 		case header := <-headers:
-			go func(header *types.Header, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain models.Chain) {
+			go func(header *types.Header, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain domain.Chain, tnxFoundPublisher *customeKafka.Writer) {
 				fmt.Printf("Chain %s: New block %d\n", chain.Name, header.Number.Uint64())
 				transactions, err := ethRepo.GetTransactionsInBlock(header.Number.Uint64())
 				if err != nil {
@@ -169,15 +254,14 @@ func SyncChainData(
 					fmt.Printf("Chain %s: Found %d navtive transactions in block %d\n", chain.Name, len(transactions), header.Number.Uint64())
 				}
 
-				err = persistUsersTransactions(ctx, transactions,ethRepo, tnxRepo, chain)
+				err = persistUsersTransactions(ctx, transactions,ethRepo, tnxRepo, chain, tnxFoundPublisher)
 				if err != nil {
 					fmt.Printf("Error persisting transactions: %v\n", err)
 					return
 				}
-			}(header, wsEthRepo, tnxRepo, chain)
+			}(header, wsEthRepo, tnxRepo, chain, tnxFoundPublisher)
 		}
 	}
-
 }
 
 //to-do: add arguments hanlder to run specific chain sync job
@@ -195,10 +279,31 @@ func main() {
 	defer db.CloseDB()
 
 	transactionRepo := postgres.NewTransactionRepo(dbPool)
-	go StartKafka(cfg)
+	walletRepo := postgres.NewWalletRepo(dbPool)
+	chainRepo := postgres.NewChainRepo(dbPool)
+	balanceRepo := postgres.NewBalanceRepo(dbPool)
+	balanceUC := usecase.NewBalanceUC(balanceRepo, walletRepo, chainRepo, &ethereum.EthereumClient{})
 
-	chains := mockdb.LoadChainsFromDatabase()
-	wallets := mockdb.LoadWalletsFromDatabase()
+
+	// kafka
+	transactionFoundPublisher, err := customeKafka.NewKafkaProducer(cfg, customeKafka.WithTopic(cfg.Kafka.TransactionFoundTopic))
+	if err != nil {
+		log.Fatalf("Failed to initialize Kafka producer: %v", err)
+	}
+	defer transactionFoundPublisher.Close()
+	go StartKafkaReaderTopicWalletCreated(cfg)
+	go StartKafkaReaderTopicTransactionFound(cfg, balanceUC)
+
+	chains, err := chainRepo.GetChains(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to get chains: %v", err)
+		return
+	}
+	wallets, err := walletRepo.GetWallets(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to get chains: %v", err)
+		return
+	}
 
 	for _, wallet := range wallets {
 		walletAddressMapId[wallet.Address] = wallet.ID
@@ -212,25 +317,25 @@ func main() {
 		wg.Add(1)
 		ethRepo, err := ethereum.NewEthereumClient(chain.RPCURL, cfg.Ethereum.SecretKey)
 		if err != nil {
-			log.Fatalf("Failed to initialize Ethereum client: %v", err)
+			log.Fatalf("Chain %s: Failed to initialize Ethereum client: %v", chain.Name, err)
 			wg.Done()
 			continue
 		}
 		wsEthRepo, err := ethereum.NewEthereumClient(chain.WSURL, cfg.Ethereum.SecretKey)
 		if err != nil {
-			log.Fatalf("Failed to initialize Ethereum client: %v", err)
+			log.Fatalf("Chain %s: Failed to initialize Ethereum client: %v", chain.Name, err)
 			wg.Done()
 			continue
 		}
 		
-		go func(chain models.Chain, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository) {
+		go func(chain domain.Chain, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, tnxFoundPublisher *customeKafka.Writer) {
 			defer wg.Done()
 			fmt.Printf("Sync: Starting sync job for chain: %s\n", chain.Name)
-			err := SyncChainData(ctx, chain, ethRepo,wsEthRepo, tnxRepo)
+			err := SyncChainData(ctx, chain, ethRepo,wsEthRepo, tnxRepo, tnxFoundPublisher)
 			if err != nil {
 				fmt.Printf("Sync: Error syncing chain %s: %v\n", chain.Name, err)
 			}
-		}(chain, ethRepo, transactionRepo)
+		}(chain, ethRepo, transactionRepo, transactionFoundPublisher)
 	}
 	wg.Wait()
 }
