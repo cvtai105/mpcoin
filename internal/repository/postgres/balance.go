@@ -16,9 +16,9 @@ type balanceRepository struct {
 }
 
 // GetBalance implements repository.BalanceRepository.
-func (b *balanceRepository) GetBalancesByWalletId(ctx context.Context, walletID uuid.UUID) ([]domain.GetBalanceResponse, error) {
+func (b *balanceRepository) GetBalancesByUserId(ctx context.Context, userId uuid.UUID) ([]domain.GetBalanceResponse, error) {
 	q := sqlc.New(b.DB())
-	balances, err := q.GetBalancesByWalletId(ctx, pgtype.UUID{Bytes: walletID, Valid: true})
+	balances, err := q.GetBalancesByUserId(ctx, pgtype.UUID{Bytes: userId, Valid: true})
 	if err != nil {
 		return []domain.GetBalanceResponse{}, err
 	}
@@ -26,14 +26,15 @@ func (b *balanceRepository) GetBalancesByWalletId(ctx context.Context, walletID 
 	var result []domain.GetBalanceResponse
 	for _, b := range balances {
 		result = append(result, domain.GetBalanceResponse{
-			TokenID:   b.TokenID.Bytes,
+			TokenID:   b.ID.Bytes,
 			Balance: func() float64 {
 				val, _ := b.Balance.Float64Value()
 				return val.Float64
 			}(),
+			ContractAddress: b.ContractAddress,
 			UpdatedAt: b.UpdatedAt.Time,
-			TokenName: b.TokenName,
-			TokenSymbol: b.TokenSymbol,
+			TokenName: b.Name,
+			TokenSymbol: b.Symbol,
 			Decimals: int64(b.Decimals),
 		})
 

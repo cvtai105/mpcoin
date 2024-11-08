@@ -18,6 +18,7 @@ type Chain struct {
 	RPCURL         string
 	WSURL          string
 	NativeCurrency string
+	NativeTokenID  uuid.UUID
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	ExplorerURL    string

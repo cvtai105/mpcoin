@@ -29,10 +29,10 @@ var _ repository.TransactionRepository = (*transactionRepository)(nil)
 func (r *transactionRepository) GetPaginatedTransactions(ctx context.Context, address string, page int, limit int) ([]domain.Transaction, error) {
 
 	q := sqlc.New(r.DB())
-	transactions, err := q.GetPaginatedTransactions(ctx,sqlc.GetPaginatedTransactionsParams{
+	transactions, err := q.GetPaginatedTransactions(ctx, sqlc.GetPaginatedTransactionsParams{
 		FromAddress: pgtype.Text{String: address, Valid: true},
-		Offset:    int32((page-1)*limit),
-		Limit:   int32(limit),
+		Offset:      int32((page - 1) * limit),
+		Limit:       int32(limit),
 	})
 	if err != nil {
 		return nil, err
@@ -56,6 +56,35 @@ func (r *transactionRepository) GetPaginatedTransactions(ctx context.Context, ad
 	}
 	return result, nil
 
+}
+
+// Insert transactions that is persist on blockchain
+func (r *transactionRepository) InsertSettledTransactions(ctx context.Context, transactions []domain.Transaction) error {
+	err := r.WithTx(ctx, func(tx pgx.Tx) error {
+		q := sqlc.New(tx)
+		for _, t := range transactions {
+			_, err := q.InsertSetteledTransaction(ctx, sqlc.InsertSetteledTransactionParams{
+				ID:        pgtype.UUID{Bytes: t.ID, Valid: true},
+				WalletID:  pgtype.UUID{Bytes: t.WalletID, Valid: true},
+				ChainID:   pgtype.UUID{Bytes: t.ChainID, Valid: true},
+				ToAddress: t.ToAddress,
+				Amount:    t.Amount,
+				FromAddress: pgtype.Text{ String: t.FromAddress, Valid: true},
+				TokenID:   pgtype.UUID{Bytes: t.TokenID, Valid: true},
+				GasPrice:  pgtype.Text{String: t.GasPrice, Valid: true},
+				GasLimit:  pgtype.Text{String: t.GasLimit, Valid: true},
+				Nonce:     pgtype.Int8{Int64: t.Nonce, Valid: true},
+				Status:    string(t.Status),
+				TxHash:    pgtype.Text{String: t.TxHash, Valid: true},
+			})
+			if err != nil {
+				return err
+			}
+			
+		}
+		return nil
+	})
+	return  err
 }
 
 func (r *transactionRepository) CreateTransaction(ctx context.Context, params domain.CreateTransactionParams) (domain.Transaction, error) {

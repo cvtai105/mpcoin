@@ -34,12 +34,12 @@ type TransactionRepository interface {
 	GetTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) ([]domain.Transaction, error)
 	GetPaginatedTransactions(ctx context.Context, address string, page, limit int) ([]domain.Transaction, error)
 	UpdateTransaction(ctx context.Context, transaction domain.Transaction) error
-	// InsertTransactions(ctx context.Context, transactions []domain.Transaction) error
+	InsertSettledTransactions(ctx context.Context, transactions []domain.Transaction) error
 	DBTransaction
 }
 
 type BalanceRepository interface {
-	GetBalancesByWalletId(ctx context.Context, walletID uuid.UUID) ([]domain.GetBalanceResponse, error)
+	GetBalancesByUserId(ctx context.Context, userId uuid.UUID) ([]domain.GetBalanceResponse, error)
 }
 
 type EthereumRepository interface {
@@ -54,4 +54,5 @@ type EthereumRepository interface {
 	GetTransactionsStartFrom(blockNumber uint64) ([]domain.Transaction, error)
 	GetTransactionsInBlock(blockNumber uint64) ([]domain.Transaction, error)
 	SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error)
+	GetTransactionReceipt(context context.Context, txHash common.Hash) (*types.Receipt, error)
 }

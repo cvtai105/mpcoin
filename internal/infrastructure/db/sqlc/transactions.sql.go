@@ -181,6 +181,62 @@ func (q *Queries) GetTransactionsByWalletID(ctx context.Context, walletID pgtype
 	return items, nil
 }
 
+const insertSetteledTransaction = `-- name: InsertSetteledTransaction :one
+INSERT INTO transactions (id, wallet_id , chain_id, to_address, amount, token_id, gas_price, gas_limit, nonce, status, tx_hash, from_address)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, wallet_id, chain_id, to_address, amount, token_id, gas_price, gas_limit, nonce, status, tx_hash, created_at, updated_at, from_address
+`
+
+type InsertSetteledTransactionParams struct {
+	ID          pgtype.UUID
+	WalletID    pgtype.UUID
+	ChainID     pgtype.UUID
+	ToAddress   string
+	Amount      string
+	TokenID     pgtype.UUID
+	GasPrice    pgtype.Text
+	GasLimit    pgtype.Text
+	Nonce       pgtype.Int8
+	Status      string
+	TxHash      pgtype.Text
+	FromAddress pgtype.Text
+}
+
+func (q *Queries) InsertSetteledTransaction(ctx context.Context, arg InsertSetteledTransactionParams) (Transaction, error) {
+	row := q.db.QueryRow(ctx, insertSetteledTransaction,
+		arg.ID,
+		arg.WalletID,
+		arg.ChainID,
+		arg.ToAddress,
+		arg.Amount,
+		arg.TokenID,
+		arg.GasPrice,
+		arg.GasLimit,
+		arg.Nonce,
+		arg.Status,
+		arg.TxHash,
+		arg.FromAddress,
+	)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.WalletID,
+		&i.ChainID,
+		&i.ToAddress,
+		&i.Amount,
+		&i.TokenID,
+		&i.GasPrice,
+		&i.GasLimit,
+		&i.Nonce,
+		&i.Status,
+		&i.TxHash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.FromAddress,
+	)
+	return i, err
+}
+
 const updateTransaction = `-- name: UpdateTransaction :one
 UPDATE transactions 
 SET (status, tx_hash, gas_price, gas_limit, nonce) = ($2, $3, $4, $5, $6)

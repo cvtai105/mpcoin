@@ -121,7 +121,6 @@ func (c *EthereumClient) parseNativeCurrencyTransactionsInBlock(block *types.Blo
 			GasLimit:    strconv.FormatUint(tx.Gas(), 10),
 			CreatedAt:   time.Now(),
 			Nonce:       int64(tx.Nonce()),
-			Status:      domain.StatusSuccess,
 		}
 		transactions = append(transactions, transaction)
 	}

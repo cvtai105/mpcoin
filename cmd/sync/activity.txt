@@ -2,4 +2,5 @@ sync app có 2 việc:
 1. nghe kafka sự kiện wallet created để update usersAddress array
 2. với mỗi chain có trong db, 
     tạo 1 thread để lấy và cập nhật liên tục transactions trên blockchain và 
-    persist các transactions của user vào database
+    persist các transactions của user vào database. 
+    chỉ lấy transaction từ người khác chuyển tới users của app.

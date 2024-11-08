@@ -9,6 +9,7 @@ import (
 
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
@@ -66,51 +67,47 @@ func walletCreatedEventHandle(message string){
 	// mu.Unlock()
 }
 
-// Persist users transactions
-func persistTransactions(ctx context.Context, transactions []domain.Transaction, tnxRepo repository.TransactionRepository, chain models.Chain) error {
+func persistUsersTransactions(ctx context.Context, transactions []domain.Transaction, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain models.Chain) error {
 	usersTransactions := []domain.Transaction{}
 	for _, tnx := range transactions {
 
-		if(walletAddressMapId[tnx.FromAddress] == uuid.Nil && walletAddressMapId[tnx.ToAddress] == uuid.Nil){
+		// chỉ lấy các tnx từ address lạ chuyển tới address của user
+		if(walletAddressMapId[tnx.ToAddress] == uuid.Nil){	
 			continue
 		}
+		if(walletAddressMapId[tnx.FromAddress] != uuid.Nil){
+			continue
+		}
+
+
 		fmt.Printf("Transaction: %s\n", tnx.TxHash)
 		fmt.Printf("From: %s\n", tnx.FromAddress)
 		fmt.Printf("To: %s\n", tnx.ToAddress)
 
-		// todo: Check if the transaction already exists in the database
+		tnxReceipt, err := ethRepo.GetTransactionReceipt(ctx, common.HexToHash(tnx.TxHash))
+		if err != nil {
+			fmt.Printf("Error getting transaction receipt: %v\n", err)
+			return err
+		}
+		if(tnxReceipt.Status == 0){
+			tnx.Status = domain.StatusFailed
+		}else{
+			tnx.Status = domain.StatusSuccess
+		}
+		tnx.ChainID = chain.ID
+		tnx.TokenID = chain.NativeTokenID
 		usersTransactions = append(usersTransactions, tnx)
 	}
 
-	// todo: refactor this, insert multiple transactions at once
-	for _, tnx := range usersTransactions {
-		_, err := tnxRepo.CreateTransaction(ctx, domain.CreateTransactionParams{
-			ID:        uuid.New(),
-			WalletID:  walletAddressMapId[tnx.FromAddress],
-			ChainID:   chain.ID,
-			FromAddress: tnx.FromAddress,
-			ToAddress: tnx.ToAddress,
-			Amount:    tnx.Amount,
-			TokenID:   uuid.Nil,
-			GasPrice:  tnx.GasPrice,
-			GasLimit:  tnx.GasLimit,
-			Nonce:     tnx.Nonce,
-			Status:    domain.Status(tnx.Status),
-		})
-		if err != nil {
-			fmt.Printf("Error inserting transaction %s: %v\n", tnx.TxHash, err)
-			return err
-		}
-		err = tnxRepo.UpdateTransaction(ctx, tnx)
-		if err != nil {
-			fmt.Printf("Error updating transaction %s: %v\n", tnx.TxHash, err)
-		}
+	err := tnxRepo.InsertSettledTransactions(ctx, usersTransactions)
+	if err != nil {
+		fmt.Printf("Error inserting transactions: %v\n", err)
+		return err
 	}
 
 	return nil
 }
 
-// Consider using eth_subscribe to be notified when new blocks are available. https://docs.infura.io/api/networks/ethereum/how-to/subscribe-to-events
 func SyncChainData(
 	ctx context.Context, 
 	chain models.Chain, 
@@ -129,7 +126,7 @@ func SyncChainData(
 				return
 			}
 
-			err = persistTransactions(ctx, transactions, tnxRepo, chain)
+			err = persistUsersTransactions(ctx, transactions, ethRepo, tnxRepo, chain)
 			if err != nil {
 				fmt.Printf("Error persisting transactions: %v\n", err)
 				return
@@ -172,7 +169,11 @@ func SyncChainData(
 					fmt.Printf("Chain %s: Found %d navtive transactions in block %d\n", chain.Name, len(transactions), header.Number.Uint64())
 				}
 
-				persistTransactions(ctx, transactions, tnxRepo, chain)
+				err = persistUsersTransactions(ctx, transactions,ethRepo, tnxRepo, chain)
+				if err != nil {
+					fmt.Printf("Error persisting transactions: %v\n", err)
+					return
+				}
 			}(header, wsEthRepo, tnxRepo, chain)
 		}
 	}

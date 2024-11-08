@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"mpc/internal/domain"
 	"mpc/internal/repository"
 
@@ -10,7 +10,7 @@ import (
 )
 
 type BalanceUseCase interface {
-	GetBalancesByWalletId(ctx context.Context, walletID uuid.UUID, userId uuid.UUID) ([]domain.GetBalanceResponse, error)
+	GetBalancesByUserId(ctx context.Context, userId uuid.UUID) ([]domain.GetBalanceResponse, error)
 }
 
 type balanceUseCase struct {
@@ -27,20 +27,13 @@ func NewBalanceUC(balanceRepo repository.BalanceRepository, walletRepo repositor
 
 var _ BalanceUseCase = (*balanceUseCase)(nil)
 
-func (uc *balanceUseCase) GetBalancesByWalletId(ctx context.Context, walletID uuid.UUID, userId uuid.UUID) ([]domain.GetBalanceResponse, error) {
-	// Check if wallet belongs to user
-	wallet, err := uc.walletRepo.GetWallet(ctx, walletID)
-	// return error if wallet does not exist
-	if err != nil {
-		return nil, errors.New("invalid wallet id")
-	}
-
-	// return error if wallet does not belong to 
-	if wallet.UserID != userId {
-		return nil, errors.New("Forbidden")
-	}
-
+func (uc *balanceUseCase) GetBalancesByUserId(ctx context.Context, userId uuid.UUID) ([]domain.GetBalanceResponse, error) {
 	// get balances
-	return uc.balanceRepo.GetBalancesByWalletId(ctx, walletID)
-}
+	result, err := uc.balanceRepo.GetBalancesByUserId(ctx, userId)
+	if err != nil {
+		fmt.Println("balanceUseCase.GetBalancesByUserId error 1: ", err.Error()) 
+		return []domain.GetBalanceResponse{} , err
+	}
 
+	return result, nil	
+}

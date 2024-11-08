@@ -1,14 +1,14 @@
--- name: GetBalancesByWalletId :many
+-- name: GetBalancesByUserId :many
 SELECT 
     b.balance,
-    t.id AS token_id,
-    t.name AS token_name,
-    t.symbol AS token_symbol,
-    t.decimals,
-    b.updated_at
+    t.*
 FROM 
     balances b
 JOIN 
+    wallets w ON b.wallet_id = w.id
+JOIN 
     tokens t ON b.token_id = t.id
+JOIN 
+    users u ON w.user_id = u.id
 WHERE 
-    b.wallet_id = $1;
+    u.id = $1;

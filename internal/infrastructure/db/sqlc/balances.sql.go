@@ -11,46 +11,52 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getBalancesByWalletId = `-- name: GetBalancesByWalletId :many
+const getBalancesByUserId = `-- name: GetBalancesByUserId :many
 SELECT 
     b.balance,
-    t.id AS token_id,
-    t.name AS token_name,
-    t.symbol AS token_symbol,
-    t.decimals,
-    b.updated_at
+    t.id, t.chain_id, t.contract_address, t.name, t.symbol, t.decimals, t.created_at, t.updated_at
 FROM 
     balances b
 JOIN 
+    wallets w ON b.wallet_id = w.id
+JOIN 
     tokens t ON b.token_id = t.id
+JOIN 
+    users u ON w.user_id = u.id
 WHERE 
-    b.wallet_id = $1
+    u.id = $1
 `
 
-type GetBalancesByWalletIdRow struct {
-	Balance     pgtype.Numeric
-	TokenID     pgtype.UUID
-	TokenName   string
-	TokenSymbol string
-	Decimals    int32
-	UpdatedAt   pgtype.Timestamptz
+type GetBalancesByUserIdRow struct {
+	Balance         pgtype.Numeric
+	ID              pgtype.UUID
+	ChainID         pgtype.UUID
+	ContractAddress string
+	Name            string
+	Symbol          string
+	Decimals        int32
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
 }
 
-func (q *Queries) GetBalancesByWalletId(ctx context.Context, walletID pgtype.UUID) ([]GetBalancesByWalletIdRow, error) {
-	rows, err := q.db.Query(ctx, getBalancesByWalletId, walletID)
+func (q *Queries) GetBalancesByUserId(ctx context.Context, id pgtype.UUID) ([]GetBalancesByUserIdRow, error) {
+	rows, err := q.db.Query(ctx, getBalancesByUserId, id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetBalancesByWalletIdRow
+	var items []GetBalancesByUserIdRow
 	for rows.Next() {
-		var i GetBalancesByWalletIdRow
+		var i GetBalancesByUserIdRow
 		if err := rows.Scan(
 			&i.Balance,
-			&i.TokenID,
-			&i.TokenName,
-			&i.TokenSymbol,
+			&i.ID,
+			&i.ChainID,
+			&i.ContractAddress,
+			&i.Name,
+			&i.Symbol,
 			&i.Decimals,
+			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
 			return nil, err

@@ -26,6 +26,7 @@ type Chain struct {
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
 	ExplorerUrl    pgtype.Text
+	NativeTokenID  pgtype.UUID
 }
 
 type Token struct {

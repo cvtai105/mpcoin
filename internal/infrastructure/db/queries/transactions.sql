@@ -3,6 +3,11 @@ INSERT INTO transactions (id, wallet_id , chain_id, to_address, amount, token_id
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
+-- name: InsertSetteledTransaction :one
+INSERT INTO transactions (id, wallet_id , chain_id, to_address, amount, token_id, gas_price, gas_limit, nonce, status, tx_hash, from_address)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING *;
+
 -- name: GetTransaction :one
 SELECT * FROM transactions
 WHERE id = $1 LIMIT 1;

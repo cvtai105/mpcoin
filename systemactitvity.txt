@@ -1,0 +1,25 @@
+1. signup - create wallet
+    1 user 1 wallet.
+    backend create random address, and balance list, persist in db
+
+2. get balances of wallet (login -> home)
+    frontend pass access_token
+    backend get balance base on user_id in access_token
+    backend return list of {token, balance}
+    backend return data: list {token, balance, chain}
+
+3. get user transactions on specific token/chain (user click token)
+    frontend pass access_token and tokenId/tokenId
+    backend get chainId base on tokenId (store map in buffer for performace enhance)
+    backend get transactions base on user_id and chainId.
+    backend return data: {transactions}
+
+4. 
+
+4. tranfer token
+
+
+
+*. add chain (admin)
+add native token, chain
+add balances for all user

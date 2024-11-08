@@ -18,6 +18,7 @@ type Balance struct {
 type GetBalanceResponse struct {
 	TokenID uuid.UUID   `json:"token_id"`
 	TokenName string    `json:"token_name"`
+	ContractAddress string `json:"contract_address"`
 	TokenSymbol string  `json:"token_symbol"`
 	Decimals int64      `json:"decimals"`
 	Balance float64     `json:"balance"`
