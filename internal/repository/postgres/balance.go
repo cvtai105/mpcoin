@@ -43,6 +43,7 @@ func (b *balanceRepository) GetBalancesByUserId(ctx context.Context, userId uuid
 		result = append(result, domain.GetBalanceResponse{
 			TokenID: b.ID.Bytes,
 			Balance: *b.Balance.Int,
+			ChainID: b.ChainID.Bytes,
 			ContractAddress: b.ContractAddress,
 			UpdatedAt:       b.UpdatedAt.Time,
 			TokenName:       b.Name,

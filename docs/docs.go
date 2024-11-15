@@ -629,6 +629,9 @@ const docTemplate = `{
                 "balance": {
                     "$ref": "#/definitions/big.Int"
                 },
+                "chain_id": {
+                    "type": "string"
+                },
                 "contract_address": {
                     "type": "string"
                 },

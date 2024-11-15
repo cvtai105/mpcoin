@@ -22,6 +22,7 @@ type GetBalanceResponse struct {
 	TokenName string    `json:"token_name"`
 	ContractAddress string `json:"contract_address"`
 	TokenSymbol string  `json:"token_symbol"`
+	ChainID uuid.UUID   `json:"chain_id"`
 	Decimals int64      `json:"decimals"`
 	Balance big.Int     `json:"balance"`
 	UpdatedAt time.Time `json:"updated_at"`

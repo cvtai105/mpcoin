@@ -25,6 +25,7 @@ func NewRouter(
 
 	router := gin.Default()
 	// router.Use(middleware.LoggerMiddleware(log))
+	router.Use(middleware.CORS())
 	router.Use(gin.Recovery())
 
 	healthHandler := handler.NewHealthHandler()

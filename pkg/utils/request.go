@@ -20,6 +20,16 @@ func ParseRequest[T any](c *gin.Context) (T, error) {
 	return req, nil
 }
 
+// func ParseRequest[T any](c *gin.Context) (T, error) {
+// 	var req T
+// 	err := json.NewDecoder(c.Request.Body).Decode(&req)
+//     if err != nil {
+//         return req, err
+//     }
+// 	return req, nil
+// }
+
+
 func GetAuthToken(c *gin.Context) (string, error) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
