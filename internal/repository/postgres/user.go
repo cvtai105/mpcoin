@@ -25,6 +25,25 @@ func NewUserRepo(dbPool *pgxpool.Pool) repository.UserRepository {
 // Ensure UserRepository implements UserRepository
 var _ repository.UserRepository = (*userRepository)(nil)
 
+
+// GetUserWithWalletAddress implements repository.UserRepository.
+func (r *userRepository) GetUserWithWallet(ctx context.Context, id uuid.UUID) (domain.UserWithWallet, error) {
+	q := sqlc.New(r.DB())
+	dbUser, err := q.GetUserWithWallet(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return domain.UserWithWallet{}, err
+	}
+
+	return domain.UserWithWallet{
+		UserId:        dbUser.ID.Bytes,
+		Email:     dbUser.Email,
+		WalletId: dbUser.ID_2.Bytes,
+		WalletAddress: dbUser.Address.String,
+	}, nil
+}
+
+
+
 func (r *userRepository) CreateUser(ctx context.Context, params domain.CreateHashedUserParams) (domain.User, error) {
 	var user domain.User
 	err := r.WithTx(ctx, func(tx pgx.Tx) error {

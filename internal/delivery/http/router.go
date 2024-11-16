@@ -30,7 +30,7 @@ func NewRouter(
 
 	healthHandler := handler.NewHealthHandler()
 	authHandler := handler.NewAuthHandler(*authUC)
-	userHandler := handler.NewUserHandler(userUC)
+	userHandler := handler.NewUserHandler(*userUC)
 	walletHandler := handler.NewWalletHandler(walletUC)
 	txnHandler := handler.NewTxnHandler(*txnUC)
 	balanceHanlder := handler.NewBalanceHandler(*balanceUC)
@@ -55,7 +55,7 @@ func NewRouter(
 		users := v1.Group("/users")
 		users.Use(middleware.AuthMiddleware(*jwtService))
 		{
-			users.GET("/:id", userHandler.GetUser)
+			users.GET("/profile", userHandler.GetUser)
 		}
 
 		wallets := v1.Group("/wallets")

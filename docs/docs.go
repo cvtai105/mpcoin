@@ -449,6 +449,46 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/users/profile": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get user profile",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user profile",
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "schema": {
+                            "$ref": "#/definitions/docs.GetUserWalletResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -504,6 +544,19 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/mpc_internal_domain.Transaction"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "docs.GetUserWalletResponse": {
+            "type": "object",
+            "properties": {
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "user": {
+                            "$ref": "#/definitions/mpc_internal_domain.UserWithWallet"
                         }
                     }
                 }
@@ -776,6 +829,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "walletID": {
+                    "type": "string"
+                }
+            }
+        },
+        "mpc_internal_domain.UserWithWallet": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                },
+                "walletAddress": {
+                    "type": "string"
+                },
+                "walletId": {
                     "type": "string"
                 }
             }

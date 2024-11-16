@@ -44,3 +44,12 @@ type LoginUserResponse struct {
 	ID    uuid.UUID
 	Email string
 }
+
+type UserWithWallet struct {
+	UserId uuid.UUID	`json:"user_id"`
+	Email string		`json:"email"`
+	WalletId uuid.UUID	 `json:"wallet_id"`
+	WalletAddress string `json:"wallet_address"`
+	Avatar string		`json:"avatar"`
+	Name string		`json:"name"`
+}

@@ -13,6 +13,7 @@ import (
 type UserUseCase interface {
 	GetUser(ctx context.Context, id uuid.UUID) (domain.User, error)
 	UpdateUser(ctx context.Context, params domain.UpdateUserParams) (domain.User, error)
+	GetUserWallet(ctx context.Context, id uuid.UUID) (domain.UserWithWallet, error)
 }
 
 type userUseCase struct {
@@ -49,4 +50,13 @@ func (uc *userUseCase) UpdateUser(ctx context.Context, params domain.UpdateUserP
 	}
 
 	return uc.userRepo.UpdateUser(ctx, existingUser)
+}
+
+func (uc *userUseCase) GetUserWallet(ctx context.Context, id uuid.UUID) (domain.UserWithWallet, error) {
+	user, err := uc.userRepo.GetUserWithWallet(ctx, id)
+	
+	user.Avatar = "https://robohash.org/af424cffba2a77572a76dc071c0799dc?set=set4&bgset=&size=400x400"
+	user.Name = "John Doe"
+
+	return user, err
 }

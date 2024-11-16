@@ -16,3 +16,9 @@ UPDATE users
 SET email = $2, password_hash = $3, updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
 RETURNING *;
+
+-- name: GetUserWithWallet :one
+SELECT u.id, u.email, w.id, w.address
+FROM users u
+LEFT JOIN wallets w ON u.id = w.user_id
+WHERE u.id = $1 LIMIT 1;

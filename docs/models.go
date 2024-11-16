@@ -53,3 +53,9 @@ type GetBalancesResponse struct {
 		GetBalanceResponse []domain.GetBalanceResponse `json:"balances"`
 	}
 }
+
+type GetUserWalletResponse struct {
+	Payload	  	struct {
+		User domain.UserWithWallet `json:"user"`
+	}
+}

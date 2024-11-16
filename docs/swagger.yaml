@@ -36,6 +36,14 @@ definitions:
             type: array
         type: object
     type: object
+  docs.GetUserWalletResponse:
+    properties:
+      payload:
+        properties:
+          user:
+            $ref: '#/definitions/mpc_internal_domain.UserWithWallet'
+        type: object
+    type: object
   docs.LoginResponse:
     properties:
       payload:
@@ -214,6 +222,17 @@ definitions:
       updatedAt:
         type: string
       walletID:
+        type: string
+    type: object
+  mpc_internal_domain.UserWithWallet:
+    properties:
+      email:
+        type: string
+      userId:
+        type: string
+      walletAddress:
+        type: string
+      walletId:
         type: string
     type: object
 host: localhost:8080
@@ -506,6 +525,31 @@ paths:
       summary: Submit Transaction
       tags:
       - transaction
+  /users/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get user profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response
+          schema:
+            $ref: '#/definitions/docs.GetUserWalletResponse'
+        "401":
+          description: Unauthorized error
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get user profile
+      tags:
+      - users
 securityDefinitions:
   ApiKeyAuth:
     in: header

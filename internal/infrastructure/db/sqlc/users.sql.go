@@ -71,6 +71,32 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
+const getUserWithWallet = `-- name: GetUserWithWallet :one
+SELECT u.id, u.email, w.id, w.address
+FROM users u
+LEFT JOIN wallets w ON u.id = w.user_id
+WHERE u.id = $1 LIMIT 1
+`
+
+type GetUserWithWalletRow struct {
+	ID      pgtype.UUID
+	Email   string
+	ID_2    pgtype.UUID
+	Address pgtype.Text
+}
+
+func (q *Queries) GetUserWithWallet(ctx context.Context, id pgtype.UUID) (GetUserWithWalletRow, error) {
+	row := q.db.QueryRow(ctx, getUserWithWallet, id)
+	var i GetUserWithWalletRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.ID_2,
+		&i.Address,
+	)
+	return i, err
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET email = $2, password_hash = $3, updated_at = CURRENT_TIMESTAMP
