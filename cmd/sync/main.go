@@ -33,17 +33,13 @@ var (
 )
 
 func StartKafkaReaderTopicWalletCreated(cfg *config.Config) {
-	kafConf := kafka.ReaderConfig{
-		Brokers:   cfg.Kafka.Brokers,
-		// GroupID:   cfg.Kafka.SyncGroupId,
-		Topic:     cfg.Kafka.WalletCreatedTopic,
-		// MaxBytes:  10, 
+	reader, err := customeKafka.NewKafkaConsumer(cfg, customeKafka.WithTopic(cfg.Kafka.WalletCreatedTopic))
+	if err != nil {
+		log.Fatalf("Failed to initialize Kafka consumer: %v", err)
 	}
-
-	reader := kafka.NewReader(kafConf)
 	defer reader.Close()
 
-	if err := reader.SetOffset(kafka.LastOffset); err != nil {
+	if err = reader.SetOffset(kafka.LastOffset); err != nil {
 		fmt.Println("error listening to wallet created topic:", err)
 		return
 	}
@@ -63,22 +59,18 @@ func StartKafkaReaderTopicWalletCreated(cfg *config.Config) {
 	}
 }
 func StartKafkaReaderTopicTransactionFound(cfg *config.Config, balanceUC usecase.BalanceUseCase) {
-	kafConf := kafka.ReaderConfig{
-		Brokers:   cfg.Kafka.Brokers,
-		// GroupID:   cfg.Kafka.SyncGroupId,
-		Topic:     cfg.Kafka.TransactionFoundTopic,
-		// MaxBytes:  10, 
+	reader, err := customeKafka.NewKafkaConsumer(cfg, customeKafka.WithTopic(cfg.Kafka.TransactionFoundTopic))
+	if err != nil {
+		log.Fatalf("Failed to initialize Kafka consumer: %v", err)
 	}
-
-	reader := kafka.NewReader(kafConf)
 	defer reader.Close()
 
-	if err := reader.SetOffset(kafka.LastOffset); err != nil {
-		fmt.Println("error listening to transaction found topic:", err)
+	if err = reader.SetOffset(kafka.LastOffset); err != nil {
+		fmt.Println("error listening to wallet created topic:", err)
 		return
 	}
 
-	fmt.Println("Start listening to transaction found topic")
+	fmt.Println("Start listening to wallet created topic")
 
 	for {
 		m, err := reader.ReadMessage(context.Background())
@@ -87,7 +79,6 @@ func StartKafkaReaderTopicTransactionFound(cfg *config.Config, balanceUC usecase
 			fmt.Printf("Error reading kafka message: %v\n", err)
 			continue
 		}
-
 		//Handle message
 		transactionFoundHandle(string(m.Value), balanceUC)
 	}

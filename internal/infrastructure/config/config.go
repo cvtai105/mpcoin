@@ -39,9 +39,9 @@ type EthereumConfig struct {
 }
 
 type RedisConfig struct {
-	Addr     string `mapstructure:"ADDR"`
-	Password string `mapstructure:"PASSWORD"`
-	DB       int    `mapstructure:"DB"`
+	Addr     string `mapstructure:"REDIS_HOST"`
+	Password string `mapstructure:"REDIS_PASSWORD"`
+	DB       int    `mapstructure:"REDIS_DB"`
 }
 
 type KafkaConfig struct {
