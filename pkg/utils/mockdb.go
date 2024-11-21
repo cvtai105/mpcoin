@@ -10,8 +10,16 @@ import (
 
 func UseCvTaiSampleData(dbPool *pgxpool.Pool, cfg *config.Config) {
 	if cfg.DB.UseCvTaiSample {
+
+		//check connection
+		err := dbPool.Ping(context.Background())
+		if err != nil {
+			log.Printf("Failed to ping database: %v", err)
+			return
+		}
+
 		log.Printf("Use CV Tai sample data")
-		_, err := dbPool.Exec(context.Background(), "DELETE FROM chains")
+		_, err = dbPool.Exec(context.Background(), "DELETE FROM chains")
 		if err != nil {
 			log.Printf("Unable to delete chains table: %v\n", err)
 		}

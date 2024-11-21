@@ -174,3 +174,28 @@ Contributions are welcome! Please follow these steps:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+
+
+# Run app locally
+1. clone repo
+   ```
+   git clone https://github.com/vietddude/mpcoin.git
+   cd mpcoin
+   ```
+2. run docker:
+   ```
+   docker-compose up -d
+   ```
+3. wait till all container run
+4. migrate database schema:
+   ```
+   docker-compose exec golang-api goose -dir /app/internal/infrastructure/db/migrations up
+   ```
+5. Seed data: not yet implement :)
+6. API swagger doc: [localhost:8080http://localhost:8080/api/v1/swagger/index.html](http://localhost:8080/api/v1/swagger/index.html)
+7. shutdown app:
+   ```
+   docker-compose down
+   ```
+

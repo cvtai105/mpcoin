@@ -107,12 +107,18 @@ func Load() (*Config, error) {
 	// Manually set values for fields that don't match the default structure
 	config.DB.ConnStr = viper.GetString("CONN_STR")
 	config.DB.UseCvTaiSample = viper.GetBool("DB_USE_CVTAI_SAMPLE")
+	
 	config.Ethereum.URL = viper.GetString("ETHEREUM_URL")
 	config.Ethereum.SecretKey = viper.GetString("ETHEREUM_SECRET_KEY")
+
 	config.Kafka.Brokers = viper.GetStringSlice("BROKERS")
 	config.Kafka.WalletCreatedTopic = viper.GetString("KAFKA_WALLET_CREATED_TOPIC")
 	config.Kafka.TransactionFoundTopic = viper.GetString("KAFKA_TRANSACTION_FOUND_TOPIC")
 	config.Kafka.SyncGroupId = viper.GetString("KAFKA_SYNCHRONIZE_GROUP_ID")
+
+	config.Redis.Addr = viper.GetString("REDIS_HOST")
+	config.Redis.Password = viper.GetString("REDIS_PASSWORD")
+	config.Redis.DB = viper.GetInt("REDIS_DB")
 
 	// Set default values if not provided
 	if config.JWT.TokenDuration == 0 {

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -35,22 +34,22 @@ var (
 func StartKafkaReaderTopicWalletCreated(cfg *config.Config) {
 	reader, err := customeKafka.NewKafkaConsumer(cfg, customeKafka.WithTopic(cfg.Kafka.WalletCreatedTopic))
 	if err != nil {
-		log.Fatalf("Failed to initialize Kafka consumer: %v", err)
+		log.Printf("Failed to initialize Kafka consumer: %v", err)
 	}
 	defer reader.Close()
 
 	if err = reader.SetOffset(kafka.LastOffset); err != nil {
-		fmt.Println("error listening to wallet created topic:", err)
+		log.Println("error listening to wallet created topic:", err)
 		return
 	}
 
-	fmt.Println("Start listening to wallet created topic")
+	log.Println("Start listening to wallet created topic")
 
 	for {
 		m, err := reader.ReadMessage(context.Background())
 		if err != nil {
-			log.Fatal(err)
-			fmt.Printf("Error reading kafka message: %v\n", err)
+			log.Print(err)
+			log.Printf("Error reading kafka message: %v\n", err)
 			continue
 		}
 
@@ -61,22 +60,22 @@ func StartKafkaReaderTopicWalletCreated(cfg *config.Config) {
 func StartKafkaReaderTopicTransactionFound(cfg *config.Config, balanceUC usecase.BalanceUseCase) {
 	reader, err := customeKafka.NewKafkaConsumer(cfg, customeKafka.WithTopic(cfg.Kafka.TransactionFoundTopic))
 	if err != nil {
-		log.Fatalf("Failed to initialize Kafka consumer: %v", err)
+		log.Printf("Failed to initialize Kafka consumer: %v", err)
 	}
 	defer reader.Close()
 
 	if err = reader.SetOffset(kafka.LastOffset); err != nil {
-		fmt.Println("error listening to wallet created topic:", err)
+		log.Println("error listening to wallet created topic:", err)
 		return
 	}
 
-	fmt.Println("Start listening to wallet created topic")
+	log.Println("Start listening to wallet created topic")
 
 	for {
 		m, err := reader.ReadMessage(context.Background())
 		if err != nil {
-			log.Fatal(err)
-			fmt.Printf("Error reading kafka message: %v\n", err)
+			log.Print(err)
+			log.Printf("Error reading kafka message: %v\n", err)
 			continue
 		}
 		//Handle message
@@ -85,11 +84,11 @@ func StartKafkaReaderTopicTransactionFound(cfg *config.Config, balanceUC usecase
 }
 
 func walletCreatedEventHandle(message string){
-	fmt.Printf("New wallet created: %s\n", message)
+	log.Printf("New wallet created: %s\n", message)
 	var data domain.Wallet
     err := json.Unmarshal([]byte(message), &data)
     if err != nil {
-        fmt.Println("Error unmarshalling JSON:", err)
+        log.Println("Error unmarshalling JSON:", err)
         return
     }
 	//update wallet address hash table
@@ -103,7 +102,7 @@ func transactionFoundHandle(message string, balanceUC usecase.BalanceUseCase){
 	var data domain.Transaction
 	err := json.Unmarshal([]byte(message), &data)
 	if err != nil {
-		fmt.Println("Error unmarshalling JSON:", err)
+		log.Println("Error unmarshalling JSON:", err)
 		return
 	}
 	
@@ -113,14 +112,14 @@ func transactionFoundHandle(message string, balanceUC usecase.BalanceUseCase){
 	if hasFrom != uuid.Nil {
 		err = balanceUC.UpdateBalanceRPC(context.Background(), common.HexToAddress(data.FromAddress), data.TokenID)
 		if err != nil {
-			fmt.Println("Error updating balance:", err)
+			log.Println("Error updating balance:", err)
 			return
 		}
 	}	
 	if hasTo != uuid.Nil {
 		err = balanceUC.UpdateBalanceRPC(context.Background(), common.HexToAddress(data.ToAddress), data.TokenID)
 		if err != nil {
-			fmt.Println("Error updating balance:", err)
+			log.Println("Error updating balance:", err)
 			return
 		}
 	}
@@ -140,7 +139,7 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 		//publish transaction found event
 		messageJSON, err := json.Marshal(tnx)
 		if err != nil {
-			fmt.Println("Error marshalling JSON:", err)
+			log.Println("Error marshalling JSON:", err)
 		}
 		err = tnxFoundPublisher.WriteMessages(ctx, kafka.Message{
 			Key:   []byte(tnx.ID.String()),
@@ -149,7 +148,7 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 		if err != nil {
 			log.Printf("Failed to publish message to Kafka: %v", err)
 		}else{
-			fmt.Println("Published message to Topic: ", tnxFoundPublisher.Topic)
+			log.Println("Published message to Topic: ", tnxFoundPublisher.Topic)
 		}
 
 		// chỉ lấy các tnx từ address lạ chuyển tới address của user để persist vào db
@@ -161,13 +160,13 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 		}
 
 
-		fmt.Printf("Transaction: %s\n", tnx.TxHash)
-		fmt.Printf("From: %s\n", tnx.FromAddress)
-		fmt.Printf("To: %s\n", tnx.ToAddress)
+		log.Printf("Transaction: %s\n", tnx.TxHash)
+		log.Printf("From: %s\n", tnx.FromAddress)
+		log.Printf("To: %s\n", tnx.ToAddress)
 
 		tnxReceipt, err := ethRepo.GetTransactionReceipt(ctx, common.HexToHash(tnx.TxHash))
 		if err != nil {
-			fmt.Printf("Error getting transaction receipt: %v\n", err)
+			log.Printf("Error getting transaction receipt: %v\n", err)
 			return err
 		}
 		if(tnxReceipt.Status == 0){
@@ -182,7 +181,7 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 
 	err := tnxRepo.InsertSettledTransactions(ctx, usersTransactions)
 	if err != nil {
-		fmt.Printf("Error inserting transactions: %v\n", err)
+		log.Printf("Error inserting transactions: %v\n", err)
 		return err
 	}
 
@@ -192,40 +191,40 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 func SyncChainData(	ctx context.Context, chain domain.Chain, ethRepo repository.EthereumRepository, wsEthRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, tnxFoundPublisher *customeKafka.Writer) error {
 	// Initial scan from start block to the latest block
 	if chain.LastScanBlock == -1 {
-		fmt.Printf("Chain %s added.\n", chain.Name)
+		log.Printf("Chain %s added.\n", chain.Name)
 	} else {
 		go func(blockNum uint64, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain domain.Chain, tnxFoundPublisher *customeKafka.Writer) {
-			fmt.Printf("Chain %s is scanning from block %d to end\n", chain.Name, chain.LastScanBlock)
+			log.Printf("Chain %s is scanning from block %d to end\n", chain.Name, chain.LastScanBlock)
 			transactions, err := ethRepo.GetTransactionsStartFrom(blockNum)
 			if err != nil {
-				fmt.Printf("Error getting transactions: %v\n", err)
+				log.Printf("Error getting transactions: %v\n", err)
 				return
 			}
 
 			err = persistUsersTransactions(ctx, transactions, ethRepo, tnxRepo, chain, tnxFoundPublisher)
 			if err != nil {
-				fmt.Printf("Error persisting transactions: %v\n", err)
+				log.Printf("Error persisting transactions: %v\n", err)
 				return
 			}
 		}(uint64(chain.LastScanBlock), ethRepo, tnxRepo, chain, tnxFoundPublisher)
 	}
 
-	fmt.Printf("Setting up WebSocket connection for chain: %s\n", chain.Name)
+	log.Printf("Setting up WebSocket connection for chain: %s\n", chain.Name)
 	headers := make(chan *types.Header)
 	sub, err := wsEthRepo.SubscribeNewHead(context.Background(), headers)
 	if err != nil {
-		log.Fatalf("Failed to subscribe to new head: %v", err)
+		log.Printf("Failed to subscribe to new head: %v", err)
 	}
 
 	// Lắng nghe sự kiện khi có block mới
-	fmt.Println("Listening for new blocks...")
+	log.Println("Listening for new blocks...")
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("Context canceled, stopping block listener for chain %s\n", chain.Name)
+			log.Printf("Context canceled, stopping block listener for chain %s\n", chain.Name)
 			return nil
 		case err := <-sub.Err():
-			fmt.Printf("Subscription error on chain %s: %v. Retrying...\n", chain.Name, err)
+			log.Printf("Subscription error on chain %s: %v. Retrying...\n", chain.Name, err)
 			time.Sleep(5 * time.Second) // Retry delay before reconnecting
 			sub, err = wsEthRepo.SubscribeNewHead(ctx, headers)
 			if err != nil {
@@ -234,20 +233,20 @@ func SyncChainData(	ctx context.Context, chain domain.Chain, ethRepo repository.
 			}
 		case header := <-headers:
 			go func(header *types.Header, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain domain.Chain, tnxFoundPublisher *customeKafka.Writer) {
-				fmt.Printf("Chain %s: New block %d\n", chain.Name, header.Number.Uint64())
+				log.Printf("Chain %s: New block %d\n", chain.Name, header.Number.Uint64())
 				transactions, err := ethRepo.GetTransactionsInBlock(header.Number.Uint64())
 				if err != nil {
-					fmt.Printf("Error getting transactions for block %d on chain %s: %v\n", header.Number.Uint64(), chain.Name, err)
+					log.Printf("Error getting transactions for block %d on chain %s: %v\n", header.Number.Uint64(), chain.Name, err)
 					return
 				}
 
 				if len(transactions) > 0 {
-					fmt.Printf("Chain %s: Found %d navtive transactions in block %d\n", chain.Name, len(transactions), header.Number.Uint64())
+					log.Printf("Chain %s: Found %d navtive transactions in block %d\n", chain.Name, len(transactions), header.Number.Uint64())
 				}
 
 				err = persistUsersTransactions(ctx, transactions,ethRepo, tnxRepo, chain, tnxFoundPublisher)
 				if err != nil {
-					fmt.Printf("Error persisting transactions: %v\n", err)
+					log.Printf("Error persisting transactions: %v\n", err)
 					return
 				}
 			}(header, wsEthRepo, tnxRepo, chain, tnxFoundPublisher)
@@ -259,13 +258,13 @@ func SyncChainData(	ctx context.Context, chain domain.Chain, ethRepo repository.
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Printf("Failed to load config: %v", err)
 		return
 	}
 
 	dbPool, err := db.InitDB(cfg)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		log.Printf("Failed to initialize database: %v", err)
 	}
 	defer db.CloseDB()
 
@@ -279,7 +278,7 @@ func main() {
 	// kafka
 	transactionFoundPublisher, err := customeKafka.NewKafkaProducer(cfg, customeKafka.WithTopic(cfg.Kafka.TransactionFoundTopic))
 	if err != nil {
-		log.Fatalf("Failed to initialize Kafka producer: %v", err)
+		log.Printf("Failed to initialize Kafka producer: %v", err)
 	}
 	defer transactionFoundPublisher.Close()
 	go StartKafkaReaderTopicWalletCreated(cfg)
@@ -287,12 +286,12 @@ func main() {
 
 	chains, err := chainRepo.GetChains(context.Background())
 	if err != nil {
-		log.Fatalf("Failed to get chains: %v", err)
+		log.Printf("Failed to get chains: %v", err)
 		return
 	}
 	wallets, err := walletRepo.GetWallets(context.Background())
 	if err != nil {
-		log.Fatalf("Failed to get chains: %v", err)
+		log.Printf("Failed to get chains: %v", err)
 		return
 	}
 
@@ -308,23 +307,23 @@ func main() {
 		wg.Add(1)
 		ethRepo, err := ethereum.NewEthereumClient(chain.RPCURL, cfg.Ethereum.SecretKey)
 		if err != nil {
-			log.Fatalf("Chain %s: Failed to initialize Ethereum client: %v", chain.Name, err)
+			log.Printf("Chain %s: Failed to initialize Ethereum client: %v", chain.Name, err)
 			wg.Done()
 			continue
 		}
 		wsEthRepo, err := ethereum.NewEthereumClient(chain.WSURL, cfg.Ethereum.SecretKey)
 		if err != nil {
-			log.Fatalf("Chain %s: Failed to initialize Ethereum client: %v", chain.Name, err)
+			log.Printf("Chain %s: Failed to initialize Ethereum client: %v", chain.Name, err)
 			wg.Done()
 			continue
 		}
 		
 		go func(chain domain.Chain, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, tnxFoundPublisher *customeKafka.Writer) {
 			defer wg.Done()
-			fmt.Printf("Sync: Starting sync job for chain: %s\n", chain.Name)
+			log.Printf("Sync: Starting sync job for chain: %s\n", chain.Name)
 			err := SyncChainData(ctx, chain, ethRepo,wsEthRepo, tnxRepo, tnxFoundPublisher)
 			if err != nil {
-				fmt.Printf("Sync: Error syncing chain %s: %v\n", chain.Name, err)
+				log.Printf("Sync: Error syncing chain %s: %v\n", chain.Name, err)
 			}
 		}(chain, ethRepo, transactionRepo, transactionFoundPublisher)
 	}
