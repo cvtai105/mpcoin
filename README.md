@@ -188,7 +188,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
    docker-compose up -d
    ```
 3. wait till all container run
-4. migrate database schema:
+4. migrate database schema: (this command need to wait for golang-api install goose, check container log)
    ```
    docker-compose exec golang-api goose -dir /app/internal/infrastructure/db/migrations up
    ```

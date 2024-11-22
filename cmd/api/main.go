@@ -14,7 +14,6 @@ import (
 	"mpc/internal/infrastructure/redis"
 	"mpc/internal/repository/postgres"
 	"mpc/internal/usecase"
-	"mpc/pkg/utils"
 )
 
 // @title MPC API
@@ -39,8 +38,6 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.CloseDB()
-	
-	utils.UseCvTaiSampleData(dbPool, cfg)
 
 	// redis
 	redisClient, err := redis.NewRedisClient(cfg.Redis)
