@@ -183,19 +183,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
    git clone https://github.com/vietddude/mpcoin.git
    cd mpcoin
    ```
-2. run docker:
+2. run dockercompose (include migrate database)
    ```
    docker-compose up -d
    ```
-3. wait till all container run
-4. migrate database schema: (this command need to wait for golang-api install goose, check container log)
+3. wait till all containers ready (few minus based on internet connection)
+4. API swagger doc: [localhost:8080http://localhost:8080/api/v1/swagger/index.html](http://localhost:8080/api/v1/swagger/index.html)
+5. stop containers:
    ```
-   docker-compose exec golang-api goose -dir /app/internal/infrastructure/db/migrations up
+   docker-compose stop
    ```
-5. Seed data: not yet implement :)
-6. API swagger doc: [localhost:8080http://localhost:8080/api/v1/swagger/index.html](http://localhost:8080/api/v1/swagger/index.html)
-7. shutdown app:
+6. or remove containers and volumns:
    ```
-   docker-compose down
+   docker-compose down -v
    ```
 

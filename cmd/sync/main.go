@@ -39,11 +39,11 @@ func StartKafkaReaderTopicWalletCreated(cfg *config.Config) {
 	defer reader.Close()
 
 	if err = reader.SetOffset(kafka.LastOffset); err != nil {
-		log.Println("error listening to wallet created topic:", err)
+		log.Println("error listening to wallet-created topic:", err)
 		return
 	}
 
-	log.Println("Start listening to wallet created topic")
+	log.Println("Start listening to wallet-created topic")
 
 	for {
 		m, err := reader.ReadMessage(context.Background())
@@ -65,11 +65,11 @@ func StartKafkaReaderTopicTransactionFound(cfg *config.Config, balanceUC usecase
 	defer reader.Close()
 
 	if err = reader.SetOffset(kafka.LastOffset); err != nil {
-		log.Println("error listening to wallet created topic:", err)
+		log.Println("error listening to transaction-found topic:", err)
 		return
 	}
 
-	log.Println("Start listening to wallet created topic")
+	log.Println("Start listening to transaction-found topic")
 
 	for {
 		m, err := reader.ReadMessage(context.Background())
@@ -148,7 +148,7 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 		if err != nil {
 			log.Printf("Failed to publish message to Kafka: %v", err)
 		}else{
-			log.Println("Published message to Topic: ", tnxFoundPublisher.Topic)
+			log.Println("Published transaction found event to Topic: ", tnxFoundPublisher.Topic)
 		}
 
 		// chỉ lấy các tnx từ address lạ chuyển tới address của user để persist vào db
@@ -177,6 +177,10 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 		
 		tnx.WalletID = walletAddressMapId[tnx.ToAddress]
 		usersTransactions = append(usersTransactions, tnx)
+	}
+
+	if len(usersTransactions) == 0 {
+		return nil
 	}
 
 	err := tnxRepo.InsertSettledTransactions(ctx, usersTransactions)
@@ -240,10 +244,6 @@ func SyncChainData(	ctx context.Context, chain domain.Chain, ethRepo repository.
 					return
 				}
 
-				if len(transactions) > 0 {
-					log.Printf("Chain %s: Found %d navtive transactions in block %d\n", chain.Name, len(transactions), header.Number.Uint64())
-				}
-
 				err = persistUsersTransactions(ctx, transactions,ethRepo, tnxRepo, chain, tnxFoundPublisher)
 				if err != nil {
 					log.Printf("Error persisting transactions: %v\n", err)
@@ -264,7 +264,7 @@ func main() {
 
 	dbPool, err := db.InitDB(cfg)
 	if err != nil {
-		log.Printf("Failed to initialize database: %v", err)
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.CloseDB()
 

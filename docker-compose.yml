@@ -29,7 +29,7 @@ services:
       - "8080:8080"
     volumes:
       - ./:/app:cached
-    command: ["sh", "-c", "cd /app && go mod download && go install github.com/pressly/goose/v3/cmd/goose@latest && go run cmd/api/main.go"]
+    command: ["sh", "-c", "cd /app && go mod download && go install github.com/pressly/goose/v3/cmd/goose@latest && goose -dir /app/internal/infrastructure/db/migrations up && go run cmd/api/main.go"]
 
   postgre-db:
     image: postgres:17
@@ -87,6 +87,7 @@ services:
     container_name: golang-synchronizer
     depends_on:
       - kafka
+      - golang-api
       - postgre-db
     environment:
       - DB_HOST=postgre-db
@@ -100,6 +101,27 @@ services:
     volumes:
       - ./:/app
     command: ["sh", "-c", "cd /app && go mod download  && go run cmd/sync/main.go"]
+
+  golang-worker:
+    build:
+      context: ./_dockerfiles
+      dockerfile: worker.docker
+    container_name: golang-worker
+    depends_on:
+      - golang-api
+    environment:
+      - DB_HOST=postgre-db
+      - DB_PORT=5432
+      - CONN_STR=postgres://user:password@postgre-db:5432/mpcwallet?sslmode=disable
+      - MAX_CONNECTIONS=10
+      - BROKERS=kafka:29092
+      - KAFKA_WALLET_CREATED_TOPIC=wallet-create
+      - KAFKA_TRANSACTION_FOUND_TOPIC=transaction-found
+      - ETHEREUM_SECRET_KEY=LEi6RTO6R5gIZqFBBtB79BGHC8BHziGW 
+    volumes:
+      - ./:/app
+    command: ["sh", "-c", "cd /app && go mod download  && go run cmd/worker/main.go"]
+
 
 
 volumes:

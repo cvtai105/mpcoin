@@ -17,7 +17,7 @@ ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 #COPY ./ /app/
 
 # Build the application
-#RUN go build -o main ./cmd/api
+#RUN go build -o main ./cmd/worker
 
 # Stage 2: Run
 #FROM alpine:latest
@@ -28,3 +28,6 @@ ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 # Copy the built binary from the builder stage
 #COPY --from=builder /app/main .
 
+
+# Run the application
+CMD ["./main"]
