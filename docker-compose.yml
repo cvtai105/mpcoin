@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  golang-api:
+  backend-services:
     build:
       context: ./
       dockerfile: ./_dockerfiles/backend-services.docker
-    container_name: golang-api
+    container_name: backend-services
     depends_on:
       - kafka
       - postgre-db
