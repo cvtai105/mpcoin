@@ -189,9 +189,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
    ```
 3. wait till all containers ready (few minus based on internet connection)
 4. API swagger doc: [localhost:8080http://localhost:8080/api/v1/swagger/index.html](http://localhost:8080/api/v1/swagger/index.html)
-5. stop containers:
+5. stop and start containers (no need to rebuild ...): (containers memory usage is smaller?)
    ```
    docker-compose stop
+   ```
+   ```
+   docker-conpose start
    ```
 6. or remove containers and volumns:
    ```

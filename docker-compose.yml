@@ -3,33 +3,33 @@ version: '3.8'
 services:
   golang-api:
     build:
-      context: ./_dockerfiles
-      dockerfile: api.docker
+      context: ./
+      dockerfile: ./_dockerfiles/backend-services.docker
     container_name: golang-api
     depends_on:
       - kafka
       - postgre-db
       - redis
-    environment:
-      - DB_HOST=postgre-db
-      - DB_PORT=5432
-      - REDIS_HOST=redis:6379
-      - REDIS_PASSWORD=password
-      - REDIS_DB=0
-      - CONN_STR=postgres://user:password@postgre-db:5432/mpcwallet?sslmode=disable
-      - MAX_CONNECTIONS=10
-      - BROKERS=kafka:29092
-      - KAFKA_WALLET_CREATED_TOPIC=wallet-create
-      - KAFKA_TRANSACTION_FOUND_TOPIC=transaction-found
-      - ETHEREUM_URL=https://sepolia.infura.io/v3/6c89fb7fa351451f939eea9da6bee755
-      - GOOSE_DRIVER=postgres
-      - GOOSE_DBSTRING=host=postgre-db user=user password=password dbname=mpcwallet port=5432 sslmode=disable TimeZone=UTC
-      - ETHEREUM_SECRET_KEY=LEi6RTO6R5gIZqFBBtB79BGHC8BHziGW 
+    restart: on-failure:5 
+    volumes:
+      - .env.docker:/app/.env
+    # environment:
+    #   - DB_HOST=postgre-db
+    #   - DB_PORT=5432
+    #   - REDIS_HOST=redis:6379
+    #   - REDIS_PASSWORD=password
+    #   - REDIS_DB=0
+    #   - CONN_STR=postgres://user:password@postgre-db:5432/mpcwallet?sslmode=disable
+    #   - MAX_CONNECTIONS=10
+    #   - BROKERS=kafka:29092
+    #   - KAFKA_WALLET_CREATED_TOPIC=wallet-create
+    #   - KAFKA_TRANSACTION_FOUND_TOPIC=transaction-found
+    #   - ETHEREUM_URL=https://sepolia.infura.io/v3/6c89fb7fa351451f939eea9da6bee755
+    #   - GOOSE_DRIVER=postgres
+    #   - GOOSE_DBSTRING=host=postgre-db user=user password=password dbname=mpcwallet port=5432 sslmode=disable TimeZone=UTC
+    #   - ETHEREUM_SECRET_KEY=LEi6RTO6R5gIZqFBBtB79BGHC8BHziGW 
     ports:
       - "8080:8080"
-    volumes:
-      - ./:/app:cached
-    command: ["sh", "-c", "cd /app && go mod download && go install github.com/pressly/goose/v3/cmd/goose@latest && goose -dir /app/internal/infrastructure/db/migrations up && go run cmd/api/main.go"]
 
   postgre-db:
     image: postgres:17
@@ -42,6 +42,17 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+
+  goose:
+    image: golang:1.23-alpine
+    volumes:
+      - ./internal/infrastructure/db/migrations:/migrations 
+    command: >
+      sh -c "
+        go install github.com/pressly/goose/v3/cmd/goose@latest && 
+        goose -dir /migrations postgres 'postgres://user:password@postgre-db:5432/mpcwallet?sslmode=disable' up"
+    depends_on:
+      - postgre-db
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -57,6 +68,7 @@ services:
     container_name: kafka
     depends_on:
       - zookeeper
+    restart: on-failure:5
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -79,50 +91,6 @@ services:
       - REDIS_PASSWORD=password
       - REDIS_PORT=6379
       - REDIS_DATABASES=1
-
-  golang-synchronizer:
-    build:
-      context: ./_dockerfiles
-      dockerfile: sync.docker
-    container_name: golang-synchronizer
-    depends_on:
-      - kafka
-      - golang-api
-      - postgre-db
-    environment:
-      - DB_HOST=postgre-db
-      - DB_PORT=5432
-      - CONN_STR=postgres://user:password@postgre-db:5432/mpcwallet?sslmode=disable
-      - MAX_CONNECTIONS=10
-      - BROKERS=kafka:29092
-      - KAFKA_WALLET_CREATED_TOPIC=wallet-create
-      - KAFKA_TRANSACTION_FOUND_TOPIC=transaction-found
-      - ETHEREUM_SECRET_KEY=LEi6RTO6R5gIZqFBBtB79BGHC8BHziGW 
-    volumes:
-      - ./:/app
-    command: ["sh", "-c", "cd /app && go mod download  && go run cmd/sync/main.go"]
-
-  golang-worker:
-    build:
-      context: ./_dockerfiles
-      dockerfile: worker.docker
-    container_name: golang-worker
-    depends_on:
-      - golang-api
-    environment:
-      - DB_HOST=postgre-db
-      - DB_PORT=5432
-      - CONN_STR=postgres://user:password@postgre-db:5432/mpcwallet?sslmode=disable
-      - MAX_CONNECTIONS=10
-      - BROKERS=kafka:29092
-      - KAFKA_WALLET_CREATED_TOPIC=wallet-create
-      - KAFKA_TRANSACTION_FOUND_TOPIC=transaction-found
-      - ETHEREUM_SECRET_KEY=LEi6RTO6R5gIZqFBBtB79BGHC8BHziGW 
-    volumes:
-      - ./:/app
-    command: ["sh", "-c", "cd /app && go mod download  && go run cmd/worker/main.go"]
-
-
 
 volumes:
   postgres-data:
