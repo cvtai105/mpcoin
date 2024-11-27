@@ -81,17 +81,18 @@ var defaults = map[string]string{
 
 func Load() (*Config, error) {
 	viper.SetConfigFile(".env")
-	viper.AutomaticEnv()
-
+	
 	// Set environment variable names to match .env file
 	viper.SetEnvPrefix("")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-
+	
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf("error reading config file: %w", err)
-		}
+		// app could not run without a .env file, so I commented this block
+		// if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			// 	return nil, fmt.Errorf("error reading config file: %w", err)
+		// }
 		fmt.Println("No .env file found. Using environment variables.")
+		viper.AutomaticEnv()
 	}
 
 	// Set default values if not provided in .env or environment
