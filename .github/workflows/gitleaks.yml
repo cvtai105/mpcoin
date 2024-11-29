@@ -1,31 +1,36 @@
-name: GitLeaks Scan
+name: Gitleaks Scan
 
 on:
   push:
     branches:
       - main
-      - develop
+      - 'feature/*'  # Adjust based on your branch pattern
   pull_request:
     branches:
       - main
-      - develop
 
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Run GitLeaks
-        uses: zricethezav/gitleaks-action@v2.1.0
+      - name: Set up Go (GitLeaks dependency)
+        uses: actions/setup-go@v3
         with:
-          config: ""
-          verbose: true
-          redacted: false
+          go-version: '1.18'
 
-      - name: Upload GitLeaks Report
-        uses: actions/upload-artifact@v4
+      - name: Install Gitleaks
+        run: |
+          curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v8.11.0/gitleaks-linux-amd64 -o /usr/local/bin/gitleaks
+          chmod +x /usr/local/bin/gitleaks
+
+      - name: Run Gitleaks
+        run: gitleaks detect --source=. --report-format=github-action --report-path=gitleaks-report.json
+
+      - name: Upload Gitleaks Report as an Artifact
+        uses: actions/upload-artifact@v3
         with:
           name: gitleaks-report
-          path: gitleaks.json
+          path: gitleaks-report.json
