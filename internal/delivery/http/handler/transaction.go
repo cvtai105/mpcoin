@@ -42,8 +42,9 @@ func (h *TxnHandler) GetTransactions(c *gin.Context) {
 	}
 	tokenId, err := uuid.Parse(c.Query("token"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid token parameter")
-		return
+		// utils.ErrorResponse(c, http.StatusBadRequest, "Invalid token parameter")
+		// return
+		tokenId = uuid.Nil
 	}
 	// Get page, per_page and adress query parameters
 	page, err := strconv.Atoi(c.DefaultQuery("page", "1")) // Default to page 1

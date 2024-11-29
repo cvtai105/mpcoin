@@ -10,7 +10,7 @@ import (
 )
 
 const getChains = `-- name: GetChains :many
-SELECT id, name, chain_id, rpc_url, native_currency, created_at, updated_at, explorer_url, native_token_id, ws_url, last_scan_block_number FROM chains
+SELECT id, name, chain_id, rpc_url, native_currency, created_at, updated_at, explorer_url, native_token_id, ws_url, last_scan_block_number, is_active FROM chains
 `
 
 func (q *Queries) GetChains(ctx context.Context) ([]Chain, error) {
@@ -34,6 +34,7 @@ func (q *Queries) GetChains(ctx context.Context) ([]Chain, error) {
 			&i.NativeTokenID,
 			&i.WsUrl,
 			&i.LastScanBlockNumber,
+			&i.IsActive,
 		); err != nil {
 			return nil, err
 		}

@@ -30,7 +30,7 @@ func NewRouter(
 
 	healthHandler := handler.NewHealthHandler()
 	authHandler := handler.NewAuthHandler(*authUC)
-	userHandler := handler.NewUserHandler(*userUC)
+	userHandler := handler.NewUserHandler(*userUC, *balanceUC)
 	walletHandler := handler.NewWalletHandler(walletUC)
 	txnHandler := handler.NewTxnHandler(*txnUC)
 	balanceHanlder := handler.NewBalanceHandler(*balanceUC)

@@ -58,9 +58,15 @@ func (uc *txnUseCase) GetPaginatedTransactions(ctx context.Context, userId uuid.
 		return nil, errors.New("perPage must be greater than 0")
 	}
 
-	// Get transactions
-	txnList, err := uc.txnRepo.GetPaginatedTransactions(ctx, userId, tokenId, page, perPage)
-	
+	var txnList []domain.Transaction
+	var err error
+
+	if(tokenId == uuid.Nil){
+		txnList, err = uc.txnRepo.GetPaginatedAllTokenTransactions(ctx, userId, page, perPage)
+	} else {
+		txnList, err = uc.txnRepo.GetPaginatedTransactions(ctx, userId, tokenId, page, perPage)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("transactionUsecase.GetPaginatedTransactions: failed to call txnRepo: %w", err)
 	}

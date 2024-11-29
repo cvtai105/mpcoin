@@ -35,6 +35,7 @@ type TransactionRepository interface {
 	GetTransaction(ctx context.Context, id uuid.UUID) (domain.Transaction, error)
 	GetTransactionsByWalletID(ctx context.Context, walletID uuid.UUID) ([]domain.Transaction, error)
 	GetPaginatedTransactions(ctx context.Context, userId uuid.UUID, tokenId uuid.UUID, page, limit int) ([]domain.Transaction, error)
+	GetPaginatedAllTokenTransactions(ctx context.Context, userId uuid.UUID, page, limit int) ([]domain.Transaction, error)
 	UpdateTransaction(ctx context.Context, transaction domain.Transaction) error
 	InsertSettledTransactions(ctx context.Context, transactions []domain.Transaction) error
 	DBTransaction

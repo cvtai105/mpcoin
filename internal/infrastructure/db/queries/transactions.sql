@@ -31,3 +31,13 @@ WHERE users.id = $1 AND transactions.token_id = $2
 ORDER BY transactions.created_at DESC
 LIMIT $3
 OFFSET $4;
+
+-- name: GetPaginatedAllTokenTransactions :many
+SELECT transactions.*
+FROM users
+JOIN wallets ON users.id = wallets.user_id
+JOIN transactions ON wallets.address = transactions.from_address OR wallets.address = transactions.to_address
+WHERE users.id = $1
+ORDER BY transactions.created_at DESC
+LIMIT $2
+OFFSET $3;

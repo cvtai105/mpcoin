@@ -29,6 +29,7 @@ type Chain struct {
 	NativeTokenID       pgtype.UUID
 	WsUrl               pgtype.Text
 	LastScanBlockNumber pgtype.Int8
+	IsActive            pgtype.Bool
 }
 
 type Token struct {
@@ -65,6 +66,8 @@ type User struct {
 	PasswordHash string
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
+	Name         pgtype.Text
+	AvatarUrl    pgtype.Text
 }
 
 type Wallet struct {

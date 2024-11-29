@@ -11,10 +11,11 @@ import (
 
 type UserHandler struct {
 	userUseCase usecase.UserUseCase
+	blcUC usecase.BalanceUseCase
 }
 
-func NewUserHandler(userUseCase usecase.UserUseCase) *UserHandler {
-	return &UserHandler{userUseCase: userUseCase}
+func NewUserHandler(userUseCase usecase.UserUseCase, blcUsecase usecase.BalanceUseCase) *UserHandler {
+	return &UserHandler{userUseCase: userUseCase, blcUC: blcUsecase}
 }
 
 
@@ -44,5 +45,12 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, gin.H{"user": user})
+	//get balance
+	balances, err := h.blcUC.GetBalancesByUserId(c.Request.Context(), userId)
+
+	if err != nil {
+		balances = nil
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, gin.H{"user": user, "chains": balances})
 }
