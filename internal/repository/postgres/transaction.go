@@ -64,7 +64,7 @@ func (r *transactionRepository) GetPaginatedTransactions(ctx context.Context, us
 // GetPaginatedAllTokenTransactions implements repository.TransactionRepository.
 func (r *transactionRepository) GetPaginatedAllTokenTransactions(ctx context.Context, userId uuid.UUID, page int, limit int) ([]domain.Transaction, error) {
 	q := sqlc.New(r.DB())
-	transactions, err := q.GetPaginatedTransactions(ctx, sqlc.GetPaginatedTransactionsParams{
+	transactions, err := q.GetPaginatedAllTokenTransactions(ctx, sqlc.GetPaginatedAllTokenTransactionsParams{
 		ID:      pgtype.UUID{Bytes: userId, Valid: true}, //userId
 		Offset:  int32((page - 1) * limit),
 		Limit:   int32(limit),

@@ -125,7 +125,6 @@ func transactionFoundHandle(message string, balanceUC usecase.BalanceUseCase){
 	}
 }
 
-
 func persistUsersTransactions(ctx context.Context, transactions []domain.Transaction, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain domain.Chain, tnxFoundPublisher *customeKafka.Writer) error {
 	usersTransactions := []domain.Transaction{}
 	for _, tnx := range transactions {
@@ -320,11 +319,16 @@ func main() {
 		
 		go func(chain domain.Chain, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, tnxFoundPublisher *customeKafka.Writer) {
 			defer wg.Done()
-			log.Printf("Sync: Starting sync job for chain: %s\n", chain.Name)
-			err := SyncChainData(ctx, chain, ethRepo,wsEthRepo, tnxRepo, tnxFoundPublisher)
-			if err != nil {
-				log.Printf("Sync: Error syncing chain %s: %v\n", chain.Name, err)
+			for{
+				log.Printf("Sync: Starting sync job for chain: %s\n", chain.Name)
+				err := SyncChainData(ctx, chain, ethRepo,wsEthRepo, tnxRepo, tnxFoundPublisher)
+				if err != nil {
+					log.Printf("Sync: Error syncing chain %s: %v\n", chain.Name, err)
+				}
+				//sleep
+				time.Sleep(5 * time.Second)
 			}
+			
 		}(chain, ethRepo, transactionRepo, transactionFoundPublisher)
 	}
 	wg.Wait()
