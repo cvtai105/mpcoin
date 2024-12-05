@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -125,6 +126,7 @@ func transactionFoundHandle(message string, balanceUC usecase.BalanceUseCase){
 	}
 }
 
+// lọc ra các transaction của user và persist vào db
 func persistUsersTransactions(ctx context.Context, transactions []domain.Transaction, ethRepo repository.EthereumRepository, tnxRepo repository.TransactionRepository, chain domain.Chain, tnxFoundPublisher *customeKafka.Writer) error {
 	usersTransactions := []domain.Transaction{}
 	for _, tnx := range transactions {
@@ -150,14 +152,9 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 			log.Println("Published transaction found event to Topic: ", tnxFoundPublisher.Topic)
 		}
 
-		// chỉ lấy các tnx từ address lạ chuyển tới address của user để persist vào db
-		if(walletAddressMapId[tnx.ToAddress] == uuid.Nil){	
+		if(walletAddressMapId[tnx.ToAddress] == uuid.Nil && walletAddressMapId[tnx.FromAddress] == uuid.Nil){	
 			continue
 		}
-		if(walletAddressMapId[tnx.FromAddress] != uuid.Nil){
-			continue
-		}
-
 
 		log.Printf("Transaction: %s\n", tnx.TxHash)
 		log.Printf("From: %s\n", tnx.FromAddress)
@@ -182,6 +179,29 @@ func persistUsersTransactions(ctx context.Context, transactions []domain.Transac
 		return nil
 	}
 
+	//delete if exist
+	for _, tnx := range usersTransactions {
+		fmt.Print("Deleting transaction: ", tnx.TxHash)
+		tnx2, err := tnxRepo.DeleteTransaction(ctx, tnx.TxHash)
+		if err != nil {
+			log.Printf("Error deleting transaction: %v\n", err)
+		}
+		log.Printf("Deleted transaction: %s\n", tnx.TxHash)
+		
+		//find index of tnx in usersTransactions
+		index := -1
+		for i, t := range usersTransactions {
+			if t.TxHash == tnx2.TxHash {
+				index = i
+				break
+			}
+		}
+		if index != -1 {
+			usersTransactions[index].CreatedAt = tnx.CreatedAt
+		}
+	}
+
+	
 	err := tnxRepo.InsertSettledTransactions(ctx, usersTransactions)
 	if err != nil {
 		log.Printf("Error inserting transactions: %v\n", err)
