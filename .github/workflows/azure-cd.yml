@@ -22,10 +22,10 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Connect to Azure VM and Execute Command 
+    - name: Deploy to Azure VM 
       env:
         AZURE_VM_IP: ${{ secrets.VM_IP }}
-        AZURE_VM_USER: ${{ secrets.VM_USER }}
+        AZURE_VM_USER: ${{ secrets.VM_USER}}
         AZURE_VM_PASSWORD: ${{ secrets.VM_PASSWORD }}
       run: |
         ssh $AZURE_VM_USER@$AZURE_VM_IP
