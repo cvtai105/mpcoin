@@ -4,6 +4,16 @@ on:
   push:
     branches:
       - main  # Hoặc branch bạn muốn deploy từ đó
+    
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'pkg/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '_dockerfiles/**'
+      - 'docker-compose.yml'
+  
 
 jobs:
   deploy:
