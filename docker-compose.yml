@@ -69,7 +69,6 @@ services:
     container_name: kafka
     depends_on:
       - zookeeper
-    restart: on-failure:3
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -86,13 +85,13 @@ services:
         [
           "CMD",
           "kafka-topics",
+          "--list",
           "--bootstrap-server",
           "localhost:9092",
-          "--list",
         ]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 20
 
   redis:
     image: redis:latest
