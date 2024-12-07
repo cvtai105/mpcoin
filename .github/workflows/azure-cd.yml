@@ -28,11 +28,14 @@ jobs:
         AZURE_VM_USER: ${{ secrets.VM_USER}}
         AZURE_VM_PASSWORD: ${{ secrets.VM_PASSWORD }}
       run: |
-        ssh $AZURE_VM_USER@$AZURE_VM_IP
-        AZURE_VM_PASSWORD
-        cd mpcoin
-        git pull
-        docker-compose up -d
+        ssh -o StrictHostKeyChecking=no $AZURE_VM_USER@$AZURE_VM_IP 
+        $AZURE_VM_PASSWORD << 'EOF'
+          cd mpcoin
+          git pull
+          echo "Loading environment variables from .env"
+          export $(grep -v '^#' .env | xargs)  # Load variables from .env file
+          docker-compose up -d
+        EOF
 
   #  need to make .env file instead of hard code in docker-compose.yml
         
