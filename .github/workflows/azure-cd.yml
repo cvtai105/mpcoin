@@ -22,26 +22,17 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Install sshpass
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y sshpass
-
-    - name: Connect to Azure VM and Execute Command
+    - name: Connect to Azure VM and Execute Command 
       env:
-        AZURE_VM_IP: ${{ secrets.AZURE_VM_IP }}
-        AZURE_VM_USERNAME: ${{ secrets.AZURE_VM_USERNAME }}
-        AZURE_VM_PASSWORD: ${{ secrets.AZURE_VM_PASSWORD }}
+        AZURE_VM_IP: ${{ secrets.VM_IP }}
+        AZURE_VM_USER: ${{ secrets.VM_USER }}
+        AZURE_VM_PASSWORD: ${{ secrets.VM_PASSWORD }}
       run: |
-        sshpass -p "$AZURE_VM_PASSWORD" ssh -o StrictHostKeyChecking=no $AZURE_VM_USERNAME@$AZURE_VM_IP "echo 'Connected to Azure VM!'"
-
-    - name: Deploy to Azure VM
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} << 'EOF'
-          cd mpcoin
-          git pull
-          docker compose up -d
-        EOF
+        ssh $AZURE_VM_USER@$AZURE_VM_IP
+        AZURE_VM_PASSWORD
+        cd mpcoin
+        git pull
+        docker-compose up -d
 
   #  need to make .env file instead of hard code in docker-compose.yml
         
